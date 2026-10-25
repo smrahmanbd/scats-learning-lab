@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SCATS Quiz Bank</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<main class="wrap">
+  <header class="level-head prose">
+    <h1>Quiz bank</h1>
+    <p class="lede">All 42 questions with explanations. Pick a level, or mix everything for exam revision. Your best score per set is remembered in this browser.</p>
+  </header>
+  <div class="prose">
+    <div class="seg" role="group" aria-label="Question set" id="sets" style="margin-top:1.4rem">
+      <button type="button" data-s="foundation" aria-pressed="true">Foundation</button>
+      <button type="button" data-s="advanced">Advanced</button>
+      <button type="button" data-s="mastery">Mastery</button>
+      <button type="button" data-s="mixed">Mixed exam (20)</button>
+    </div>
+    <div class="quiz" id="qz"></div>
+  </div>
+</main>
+<script src="js/quizdata.js"></script>
+<script src="js/common.js"></script>
+<script>
+  const el = document.getElementById('qz');
+  function load(s) {
+    let qs = s === 'mixed' ? [...QUIZ.foundation, ...QUIZ.advanced, ...QUIZ.mastery].sort(() => Math.random() - 0.5).slice(0, 20) : QUIZ[s];
+    Quiz(el, qs, 'bank-' + s);
+  }
+  document.querySelectorAll('#sets button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('#sets button').forEach(x => x.setAttribute('aria-pressed', x === b)); load(b.dataset.s);
+  }));
+  load('foundation');
+</script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SCATS Mind Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="css/site.css">
+<style>
+  .lvF { --lv: var(--go); } .lvA { --lv: #2c6fb7; } .lvM { --lv: #8a4fb0; }
+  .outline details { margin-left: 14px; } .outline summary { cursor: pointer; font-weight: 600; }
+  .outline li { list-style: none; }
+  .chip { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--lv); margin-right: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="level-head prose">
+    <h1>The SCATS mind map</h1>
+    <p class="lede">Every concept in the lab on one map. Click a node to open or close its branch and read its definition; drag to pan and scroll to zoom. Colour shows the level where it is taught.</p>
+    <div class="legend" style="margin-top:10px"><span class="lvF"><span class="chip"></span>Foundation</span><span class="lvA"><span class="chip"></span>Advanced</span><span class="lvM"><span class="chip"></span>Mastery</span></div>
+  </header>
+  <div class="mm-wrap">
+    <div class="mm-tools">
+      <label for="mmSearch" class="muted">Find</label><input id="mmSearch" type="search" placeholder="e.g. voting, DS, priority">
+      <button class="btn ghost" type="button" id="mmExpand">Expand all</button>
+      <button class="btn ghost" type="button" id="mmCollapse">Collapse</button>
+      <button class="btn ghost" type="button" id="mmFit">Fit to view</button>
+    </div>
+    <svg id="mm" role="img" aria-label="Interactive mind map of SCATS concepts"></svg>
+    <div class="mm-detail" id="mmDetail" aria-live="polite"><strong>SCATS</strong> <span class="muted">Click any node to see its definition here.</span></div>
+  </div>
+  <section class="prose">
+    <h2 id="outline">Outline view</h2>
+    <p class="muted">The same map as an expandable list, handy on a phone or for revision.</p>
+    <div class="outline" id="outlineList"></div>
+  </section>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>window.d3 || document.write('<script src="js/d3.v7.8.5.min.js"><\/script>')</script>
+<script src="js/mindmap-data.js"></script>
+<script src="js/common.js"></script>
+<script>
+(function () {
+  const COLORS = { F: () => tok('--go'), A: () => '#2c6fb7', M: () => '#8a4fb0' };
+  const LV = { F: 'Foundation', A: 'Advanced', M: 'Mastery' };
+  const svg = d3.select('#mm'), g = svg.append('g');
+  const zoom = d3.zoom().scaleExtent([0.3, 2.5]).on('zoom', e => g.attr('transform', e.transform));
+  svg.call(zoom);
+  const root = d3.hierarchy(MINDMAP); root.x0 = 0; root.y0 = 0;
+  root.descendants().forEach((d, i) => { d.id = i; d._children = d.children; if (d.depth >= 1) d.children = null; });
+  const tree = d3.tree().nodeSize([30, 220]);
+  let query = '';
+
+  function update(src) {
+    tree(root);
+    const nodes = root.descendants(), links = root.links();
+    const node = g.selectAll('g.node').data(nodes, d => d.id);
+    const enter = node.enter().append('g').attr('class', 'node').attr('transform', `translate(${src.y0},${src.x0})`).style('cursor', 'pointer')
+      .attr('tabindex', 0).attr('role', 'button')
+      .on('click', (e, d) => toggle(d)).on('keydown', (e, d) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(d); } });
+    enter.append('circle').attr('r', 7).attr('stroke-width', 2);
+    enter.append('text').attr('dy', '0.32em').attr('x', 12).style('font-size', d => d.depth === 0 ? '18px' : '14px').style('font-weight', d => d.depth <= 1 ? 600 : 400).text(d => d.data.name);
+    const all = enter.merge(node);
+    all.transition().duration(250).attr('transform', d => `translate(${d.y},${d.x})`);
+    all.select('circle').attr('fill', d => d._children && !d.children ? COLORS[d.data.lv]() : tok('--surface')).attr('stroke', d => COLORS[d.data.lv]());
+    all.select('text').style('fill', d => query && d.data.name.toLowerCase().includes(query) ? tok('--stop') : tok('--fg'))
+      .attr('paint-order', 'stroke').attr('stroke', tok('--surface')).attr('stroke-width', 4);
+    node.exit().transition().duration(200).attr('transform', `translate(${src.y},${src.x})`).remove();
+    const link = g.selectAll('path.link').data(links, d => d.target.id);
+    link.enter().insert('path', 'g').attr('class', 'link').attr('fill', 'none').attr('stroke-width', 1.5)
+      .attr('d', () => { const o = { x: src.x0, y: src.y0 }; return diag(o, o); })
+      .merge(link).attr('stroke', tok('--line')).transition().duration(250).attr('d', d => diag(d.source, d.target));
+    link.exit().remove();
+    nodes.forEach(d => { d.x0 = d.x; d.y0 = d.y; });
+  }
+  const diag = (s, t) => `M${s.y},${s.x}C${(s.y + t.y) / 2},${s.x} ${(s.y + t.y) / 2},${t.x} ${t.y},${t.x}`;
+  function toggle(d) {
+    if (d.children) d.children = null; else d.children = d._children;
+    document.getElementById('mmDetail').innerHTML = `<strong>${d.data.name}</strong> <span class="muted">· ${LV[d.data.lv]}</span><br>${d.data.d}`;
+    update(d);
+  }
+  function fit() {
+    const b = g.node().getBBox(), w = svg.node().clientWidth, h = svg.node().clientHeight;
+    const s = Math.min(1.4, 0.9 / Math.max(b.width / w, b.height / h));
+    svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity.translate(w / 2 - s * (b.x + b.width / 2), h / 2 - s * (b.y + b.height / 2)).scale(s));
+  }
+  document.getElementById('mmExpand').onclick = () => { root.descendants().forEach(d => d.children = d._children); update(root); setTimeout(fit, 280); };
+  document.getElementById('mmCollapse').onclick = () => { root.descendants().forEach(d => { if (d.depth >= 1) d.children = null; }); root.children = root._children; update(root); setTimeout(fit, 280); };
+  document.getElementById('mmFit').onclick = fit;
+  document.getElementById('mmSearch').addEventListener('input', e => {
+    query = e.target.value.trim().toLowerCase();
+    if (query) root.descendants().forEach(d => { if (d._children && d.descendants().some(x => x.data.name.toLowerCase().includes(query) || (x._children || []).some(c => c.data.name.toLowerCase().includes(query)))) d.children = d._children; });
+    update(root);
+  });
+  root.children = root._children; update(root); setTimeout(fit, 50);
+  addEventListener('themechange', () => update(root));
+
+  // outline
+  const out = n => n.children ? `<details${n === MINDMAP ? ' open' : ''}><summary class="lv${n.lv}"><span class="chip"></span>${n.name}</summary><p class="muted" style="margin:.2rem 0 .4rem 16px">${n.d}</p>${n.children.map(out).join('')}</details>`
+    : `<li class="lv${n.lv}" style="margin-left:14px"><span class="chip"></span><strong>${n.name}</strong>: ${n.d}</li>`;
+  document.getElementById('outlineList').innerHTML = out(MINDMAP);
+})();
+</script>
+</body>
+</html>

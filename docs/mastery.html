@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SCATS Mastery</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<div class="wrap layout">
+  <aside class="route" aria-label="On this page"><span class="level-name">Mastery</span><ol></ol></aside>
+  <main class="content">
+    <header class="level-head prose">
+      <span class="level-tag"><span class="shield">3</span>Level 3 of 3</span>
+      <h1>Research directions, implemented</h1>
+      <p class="lede">Five open questions about where adaptive control like SCATS is heading. Each comes with a working implementation on top of the lab's SUMO controller, the result it produced, and concrete ways to push it further. Several first attempts do not beat standard SCATS; that is the honest starting line for a thesis or paper.</p>
+    </header>
+
+    <section class="prose">
+      <h2 id="method" data-short="How to do the research">How to evaluate a new SCATS idea</h2>
+      <ol>
+        <li><strong>Change one thing.</strong> Every implementation here swaps one SCATS component through a hook in <code>ControllerConfig</code> (<code>ds_source</code>, <code>split_selector</code>, <code>green_allocator</code>, <code>sensor_filter</code>) and keeps everything else as standard SCATS.</li>
+        <li><strong>Compare against three baselines:</strong> fixed time, actuated and standard SCATS, on identical demand and seeds.</li>
+        <li><strong>Use several seeds.</strong> Demand is stochastic; report the mean and the spread, not your best run.</li>
+        <li><strong>Report more than delay:</strong> stops, bus delay and queue tell different stories, and a new method can trade one for another.</li>
+        <li><strong>Ask what would stop deployment:</strong> safety envelope, explainability, data availability and robustness to bad sensors.</li>
+      </ol>
+      <pre><code>python run_all.py mastery          # all five studies, about 6 minutes
+python tools/export_site_results.py # refresh the numbers on this page</code></pre>
+    </section>
+
+    <!-- ===================== CV ===================== -->
+    <section class="prose research">
+      <h2 id="cv" data-short="Connected-vehicle DS">1. Degree of saturation from connected vehicles</h2>
+      <p class="rq">Can SCATS run on probe or connected-vehicle (CV) data instead of loops, and what penetration is needed?</p>
+      <p>Loops are expensive to install and maintain and fail often. Vehicles that report their trajectories could replace them, but only a fraction <code>p</code> of vehicles report. The simplest estimator scales the CV count and converts it to the green a saturated stream would need:</p>
+      <div class="formula">n̂   = n_CV / p
+g'̂  = n̂ · 3600 / MF
+DŜ  = g'̂ / g</div>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>Sampling noise in CV-based DS</h4><span class="hint">2,000 simulated greens, each with the same true traffic</span></div>
+      <div class="bay-body">
+        <canvas class="chart" id="cvCv" style="height:200px" aria-label="Histogram of DS estimates"></canvas>
+        <div class="bay-split">
+          <div class="controls">
+            <div class="ctl"><label for="cvP">CV penetration p</label><output id="cvPo"></output><input type="range" id="cvP" min="0.02" max="1" step="0.01" value="0.1"></div>
+            <div class="ctl"><label for="cvN">Vehicles served per green (true)</label><output id="cvNo"></output><input type="range" id="cvN" min="3" max="30" value="15"></div>
+          </div>
+          <div class="readout"><div><b id="cvTrue">–</b><span>true DS</span></div><div><b id="cvSd">–</b><span>std. dev. of estimate</span></div><div><b id="cvZero">–</b><span>greens with zero CVs</span></div></div>
+        </div>
+      </div>
+    </div>
+    <section class="prose">
+      <dl class="facts">
+        <dt>Implementation</dt><dd><code>mastery/01_cv_ds_estimation.py</code>, estimator in <code>LaneMeter.finish()</code> (<code>ds_source="cv"</code>)</dd>
+        <dt>Part A</dt><dd>Shadow mode: on the same SUMO traffic, compare CV-based DS with loop DS for 2,122 lane-cycles.</dd>
+        <dt>Part B</dt><dd>Closed loop: drive SCATS with the CV estimate.</dd>
+      </dl>
+      <div class="table-scroll" id="cvTable"></div>
+      <figure><img src="assets/results/mastery_cv_accuracy.png" alt="Mean absolute DS error against CV penetration, falling from about 0.65 at 5 percent to 0.08 at 100 percent" loading="lazy"><figcaption>Estimation error falls roughly with 1/√p. Even at 100% the count-based estimate differs from loop DS, because counts cannot see how the green was used.</figcaption></figure>
+      <p><strong>What we found.</strong> Error is large below 25% penetration. In closed loop, mean delay with CV-based DS is 8% to 21% higher than loop-based SCATS, and it does not improve steadily with penetration. Stops and bus delay even fall at low penetration, because a noisy estimate that overshoots tends to lengthen greens. Plan voting absorbs much of the noise, so delay is less sensitive than the raw error suggests.</p>
+      <p><strong>Take it further.</strong> Use where CVs join the back of the queue (shockwave theory) to see demand that has not yet crossed the stop line; fuse loops and CVs with a Kalman filter; estimate the penetration rate itself; test under spill-back, where stop-line counts mislead.</p>
+    </section>
+
+    <!-- ===================== RL ===================== -->
+    <section class="prose research">
+      <h2 id="rl" data-short="RL split selection">2. Learning split selection inside the SCATS envelope</h2>
+      <p class="rq">Can a reinforcement-learning agent choose split plans better than DS equalisation, while everything else stays SCATS?</p>
+      <p>Deep RL signal control often reports large gains in simulation but is rarely deployed: it is hard to certify, to explain and to keep safe. Restricting the agent to choosing among engineer-approved split plans keeps minimum greens, intergreens and coordination intact. The lab agent is tabular Q-learning, one table shared by the four intersections.</p>
+      <div class="formula">state  = (bin DS_A, bin DS_B, bin DS_C, plan in service)   bins at 0.5, 0.8, 1.0
+action = split plan SP1..SP4
+reward = − mean halted vehicles on the approaches during the cycle
+Q(s,a) ← Q(s,a) + α [ r + γ max Q(s',·) − Q(s,a) ]</div>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>Train an agent in your browser</h4><span class="hint">Simplified two-phase queue model, 60 s cycle, demand that swings between the phases</span></div>
+      <div class="bay-body">
+        <canvas class="chart" id="rlCv" style="height:210px" aria-label="Learning curve"></canvas>
+        <div class="legend"><span><i style="background:var(--fg)"></i>Q-learning, mean queue per episode</span><span><i style="background:var(--amber)"></i>DS-equalisation rule</span><span><i style="background:var(--muted)"></i>fixed SP1</span></div>
+        <div class="bay-split">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:start"><button class="btn" type="button" id="rlGo">Train 300 episodes</button><button class="btn ghost" type="button" id="rlReset">Reset</button></div>
+          <div class="readout"><div><b id="rlEp">0</b><span>episodes</span></div><div><b id="rlQ">–</b><span>RL queue (last 20)</span></div><div><b id="rlDs">–</b><span>DS rule queue</span></div></div>
+        </div>
+      </div>
+    </div>
+    <section class="prose">
+      <dl class="facts"><dt>Implementation</dt><dd><code>mastery/02_rl_split_selection.py</code> (<code>split_selector</code> hook). Trains 12 episodes on varied seeds, evaluates greedily on three unseen seeds of the full 90-minute corridor.</dd></dl>
+      <div class="table-scroll" id="rlTable"></div>
+      <p><strong>What we found.</strong> In the toy model the agent learns to match or beat the DS rule. On the SUMO corridor, after only 12 short episodes, it is about 4 s per vehicle worse than SCATS across three unseen seeds. The state is coarse, the reward is noisy, and SCATS's DS rule is a strong, well-tuned baseline.</p>
+      <p><strong>Take it further.</strong> Add VK and queue to the state; reward pressure or delay instead of halted vehicles; train much longer with experience replay or a small DQN; let the agent tune plan contents within bounds instead of picking among four; use offline RL from logged SCATS data.</p>
+    </section>
+
+    <!-- ===================== MP ===================== -->
+    <section class="prose research">
+      <h2 id="mp" data-short="Max-pressure hybrid">3. SCATS × max-pressure</h2>
+      <p class="rq">DS measures how well green is used but is blind to the road downstream. Can pressure-based splits make SCATS spill-back aware without losing coordination?</p>
+      <p>Max-pressure control (Varaiya, 2013) serves the phase with the largest difference between upstream queue and downstream load, and is throughput-optimal under idealised assumptions. Pure max-pressure is acyclic, so green waves are hard. The hybrid keeps SCATS's cycle length and offsets and blends greens:</p>
+      <div class="formula">pressure_p = Σ_lanes ( queue_upstream − ½ · load_downstream )
+g_p = (1 − β) · g_SCATS,p + β · avail · pressure_p / Σ pressure</div>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>Pressure versus DS split</h4><span class="hint">Two phases, 70 s of green to share. Phase A's exit is filling up.</span></div>
+      <div class="bay-body bay-split">
+        <div class="controls">
+          <div class="ctl"><label for="mpQa">Phase A upstream queue</label><output id="mpQao"></output><input type="range" id="mpQa" min="0" max="40" value="24"></div>
+          <div class="ctl"><label for="mpDa">Phase A downstream load</label><output id="mpDao"></output><input type="range" id="mpDa" min="0" max="40" value="30"></div>
+          <div class="ctl"><label for="mpQb">Phase B upstream queue</label><output id="mpQbo"></output><input type="range" id="mpQb" min="0" max="40" value="12"></div>
+          <div class="ctl"><label for="mpDb">Phase B downstream load</label><output id="mpDbo"></output><input type="range" id="mpDb" min="0" max="40" value="4"></div>
+          <div class="ctl"><label for="mpBeta">Blend β</label><output id="mpBetao"></output><input type="range" id="mpBeta" min="0" max="1" step="0.05" value="0.5"></div>
+        </div>
+        <div>
+          <div class="table-scroll" style="margin-top:0"><table class="data"><thead><tr><th>Rule</th><th>Green A</th><th>Green B</th></tr></thead><tbody id="mpT"></tbody></table></div>
+          <p class="muted" style="font-size:.92rem">The DS split here assumes phase A used its last green fully (DS 0.95) and B moderately (DS 0.6). Raise A's downstream load and watch pressure pull green away from a movement that has nowhere to go.</p>
+        </div>
+      </div>
+    </div>
+    <section class="prose">
+      <dl class="facts"><dt>Implementation</dt><dd><code>mastery/03_maxpressure_hybrid.py</code>: <code>MaxPressureController</code> (pure, acyclic) and the <code>green_allocator</code> hook for the hybrid.</dd></dl>
+      <div class="table-scroll" id="mpTable"></div>
+      <figure><img src="assets/results/mastery_maxpressure.png" alt="Bar charts comparing SCATS, pure max-pressure and the hybrid" loading="lazy"><figcaption>On an uncongested corridor with short links, SCATS still wins. Pure max-pressure stops vehicles more and is much worse for buses because it ignores progression.</figcaption></figure>
+      <p><strong>Take it further.</strong> Test where max-pressure should shine: a grid with spill-back and turning conflicts. Tune β by DS (use pressure only when downstream occupancy is high); use pressure for phase skipping decisions; add a perimeter-control layer using the network's macroscopic fundamental diagram.</p>
+    </section>
+
+    <!-- ===================== Faults ===================== -->
+    <section class="prose research">
+      <h2 id="faults" data-short="Detector faults">4. Resilience to detector faults</h2>
+      <p class="rq">Real networks always have faulty loops. How much performance is lost, and which fault handling recovers it?</p>
+      <p>A <strong>stuck-off</strong> loop never sees a vehicle: the controller sees permanent gaps, gaps out at minimum green and reads DS near zero. A <strong>stuck-on</strong> loop is permanently occupied: no gaps, so the phase runs to its maximum and DS looks saturated. Both mislead the strategic layer, which then sets wrong cycles and splits for the whole subsystem.</p>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>What a faulty loop reports</h4><span class="hint">One 30 s green with 12 vehicles, two loops on the phase</span></div>
+      <div class="bay-body bay-split">
+        <div class="controls">
+          <div class="seg" role="group" aria-label="Fault on loop 2" id="ftType"><button type="button" data-f="ok" aria-pressed="true">Loop 2 healthy</button><button type="button" data-f="off">Stuck off</button><button type="button" data-f="on">Stuck on</button></div>
+          <div class="seg" role="group" aria-label="Fault handling" id="ftHand"><button type="button" data-h="none" aria-pressed="true">Use raw data</button><button type="button" data-h="exclude">Exclude alarmed loop</button><button type="button" data-h="impute">Impute from history</button></div>
+        </div>
+        <div class="readout"><div><b id="ftL1">–</b><span>loop 1 DS</span></div><div><b id="ftL2">–</b><span>loop 2 DS</span></div><div><b id="ftPh">–</b><span>phase DS used</span></div><div><b id="ftGo">–</b><span>gap-out behaviour</span></div></div>
+      </div>
+    </div>
+    <section class="prose">
+      <dl class="facts"><dt>Implementation</dt><dd><code>mastery/04_detector_faults.py</code>: 30% of loops fail at minute 20 (half stuck-off, half stuck-on). Alarms in <code>LaneMeter.finish()</code>: no counts for 6 greens, or near-100% occupancy for 2 greens.</dd></dl>
+      <div class="table-scroll" id="ftTable"></div>
+      <figure><img src="assets/results/mastery_faults.png" alt="Bar charts comparing healthy, naive, exclude and impute fault handling" loading="lazy"><figcaption>Using faulty data naively raises delay by about 60%. Simple plausibility alarms recover most of it.</figcaption></figure>
+      <p><strong>Take it further.</strong> Detect subtler faults (sensitivity drift, crosstalk between adjacent loops); impute spatially from neighbouring lanes and upstream intersections; use CV data as the fallback source; quantify how many faults SCATS tolerates before Flexilink fallback would be better.</p>
+    </section>
+
+    <!-- ===================== SPaT ===================== -->
+    <section class="prose research">
+      <h2 id="spat" data-short="SPaT prediction">5. Predicting signal timing for connected vehicles</h2>
+      <p class="rq">Green-light speed advice, eco-driving and automated vehicles need to know when the current green will end. How predictable is an adaptive controller?</p>
+      <p>Fixed-time signals publish exact Signal Phase and Timing (SPaT). SCATS re-plans every cycle and can gap out or skip phases, so time-to-change is uncertain. The lab logs every green on the corridor and tests three predictors made at the moment the green starts.</p>
+      <dl class="facts"><dt>Implementation</dt><dd><code>mastery/05_spat_prediction.py</code>: planned allocation, persistence (last cycle's green), and a linear regression trained on the first half of the run.</dd></dl>
+      <div class="table-scroll" id="spTable"></div>
+      <p><strong>What we found.</strong> The controller's own plan is the best of the three, with a mean error of about 2.6 s; naive learning from history does worse. The useful research is in what a plan cannot know: real-time gap-out and priority calls.</p>
+      <p><strong>Take it further.</strong> Update the prediction every second using live gap timers; predict a distribution and publish a confidence band; measure the fuel benefit of speed advice with and without prediction error in SUMO.</p>
+    </section>
+
+    <section class="prose">
+      <h2 id="more" data-short="More directions">More directions worth a project</h2>
+      <ul>
+        <li><strong>Pedestrians and cyclists:</strong> DS-like utilisation measures for walk phases; double cycling and "walk with green" trade-offs.</li>
+        <li><strong>Multimodal priority:</strong> conditional bus priority by lateness or occupancy, and its cost to cross traffic.</li>
+        <li><strong>Network-level control:</strong> perimeter (gating) control on top of SCATS subsystems using the macroscopic fundamental diagram.</li>
+        <li><strong>Digital twins:</strong> calibrate a SUMO model continuously from SCATS detector logs and test plan changes before deploying them.</li>
+        <li><strong>Data-driven plan libraries:</strong> cluster historical traffic states to design split and offset plans automatically.</li>
+        <li><strong>Equity and emissions:</strong> objectives beyond vehicle delay, such as person delay and NOx near schools.</li>
+      </ul>
+      <h3>Reading list</h3>
+      <ul>
+        <li>Sims, A. G., &amp; Dobinson, K. W. (1980). The Sydney coordinated adaptive traffic (SCAT) system: philosophy and benefits. <em>IEEE Transactions on Vehicular Technology</em>, 29(2).</li>
+        <li>Lowrie, P. R. (1982). The Sydney coordinated adaptive traffic system: principles, methodology, algorithms. <em>IEE International Conference on Road Traffic Signalling</em>, London.</li>
+        <li>Varaiya, P. (2013). Max pressure control of a network of signalized intersections. <em>Transportation Research Part C</em>, 36.</li>
+        <li>Wei, H., Zheng, G., Gayah, V., &amp; Li, Z. (2019). A survey on traffic signal control methods. <a href="https://arxiv.org/abs/1904.08117">arXiv:1904.08117</a>. Includes the DS and split-selection formulation used here.</li>
+        <li>Lopez, P. A., et al. (2018). Microscopic traffic simulation using SUMO. <em>IEEE Intelligent Transportation Systems Conference (ITSC)</em>.</li>
+      </ul>
+    </section>
+
+    <section class="prose">
+      <h2 id="quiz" data-short="Quiz">Check your understanding</h2>
+      <div class="quiz" id="quizM"></div>
+    </section>
+  </main>
+</div>
+<script src="js/engine.js"></script>
+<script src="js/quizdata.js"></script>
+<script src="js/results.js"></script>
+<script src="js/common.js"></script>
+<script src="js/mastery.js"></script>
+</body>
+</html>

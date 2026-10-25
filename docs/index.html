@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SCATS Learning Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Learn the Sydney Coordinated Adaptive Traffic System in three levels with live simulators, quizzes, a mind map and runnable SUMO code.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<main class="wrap">
+  <section class="hero">
+    <div>
+      <h1>Learn SCATS by running it</h1>
+      <p class="lede">The Sydney Coordinated Adaptive Traffic System adjusts cycle length, splits and offsets every cycle from stop-line loop data. This lab teaches it in three levels, with simulators you can drive in the browser and a full SCATS-style controller for Eclipse SUMO.</p>
+      <div class="quiz-nav">
+        <a class="btn" href="foundation.html" style="text-decoration:none">Start with Foundation</a>
+        <a class="btn ghost" href="sumo.html" style="text-decoration:none">Get the SUMO code</a>
+      </div>
+    </div>
+    <div>
+      <canvas class="sim" id="heroSim" aria-label="Live simulation of an intersection under SCATS control"></canvas>
+      <div class="readout" style="margin-top:10px" aria-live="off">
+        <div><b id="hC">–</b><span>cycle length (s)</span></div>
+        <div><b id="hDs">–</b><span>DS last cycle, A / B</span></div>
+        <div><b id="hPlan">–</b><span>split plan in use</span></div>
+        <div><b id="hDelay">–</b><span>mean delay (s/veh)</span></div>
+      </div>
+      <p class="muted" style="font-size:.9rem;margin-top:8px">Live: four approaches, one stop-line loop each (the boxes flash when a vehicle crosses). Main-road demand rises and falls every few minutes; watch the cycle length follow the measured degree of saturation.</p>
+    </div>
+  </section>
+
+  <div class="levels">
+    <a href="foundation.html">
+      <span class="level-tag"><span class="shield">1</span>Foundation</span>
+      <h3>How a signal thinks</h3>
+      <ul><li>Cycle, phase, split, offset, intergreen</li><li>Loops and the degree of saturation (DS)</li><li>Tactical vs strategic control</li><li>Fixed time vs actuated vs SCATS, live</li></ul>
+    </a>
+    <a href="advanced.html">
+      <span class="level-tag"><span class="shield">2</span>Advanced</span>
+      <h3>Every SCATS mechanism</h3>
+      <ul><li>Cycle length from the critical intersection</li><li>Split and offset plans, voting</li><li>Subsystems, marriage and divorce</li><li>Gap-out, skipping, stretch, transit priority, fallback modes</li></ul>
+    </a>
+    <a href="mastery.html">
+      <span class="level-tag"><span class="shield">3</span>Mastery</span>
+      <h3>Where SCATS research is going</h3>
+      <ul><li>Connected-vehicle DS estimation</li><li>Reinforcement-learning split selection</li><li>SCATS × max-pressure hybrid</li><li>Detector-fault resilience, SPaT prediction</li></ul>
+    </a>
+  </div>
+
+  <h2 id="kit">What is in the lab</h2>
+  <div class="toolbelt">
+    <div><h4>Browser simulators</h4><p>Fifteen interactive models: a live intersection, a DS calculator, the cycle and split algorithms, a time-space diagram, marriage logic, gap-out timers, transit priority and four research experiments, including an RL agent you train in the browser.</p></div>
+    <div><h4>SUMO controller</h4><p>A Python/TraCI SCATS controller with tactical and strategic layers, a four-intersection corridor, baselines and 10 scripts that reproduce every figure on this site.</p></div>
+    <div><h4>Quizzes</h4><p>42 questions with explanations across the three levels. Each level ends with its own quiz; the <a href="quiz.html">quiz bank</a> mixes them.</p></div>
+    <div><h4>Mind map</h4><p>An explorable map of every concept, coloured by level, with a short definition for each node. <a href="mindmap.html">Open the mind map</a>.</p></div>
+  </div>
+</main>
+<script src="js/engine.js"></script>
+<script src="js/intersection-sim.js"></script>
+<script src="js/common.js"></script>
+<script>
+  const sim = new IntersectionSim(document.getElementById('heroSim'), { mode: 'scats', speed: 6, compact: false });
+  const base = { W: 650, E: 600, N: 300, S: 280 };
+  let phase = 0;
+  sim.on(r => {
+    // a slow demand wave so the hero visibly adapts
+    phase += r.dur / 900;
+    const k = 0.75 + 0.55 * Math.max(0, Math.sin(phase));
+    sim.setDemand({ W: base.W * k, E: base.E * k, N: base.N, S: base.S });
+  });
+  setInterval(() => {
+    const s = sim.stats();
+    hC.textContent = s.C.toFixed(0);
+    hDs.textContent = `${s.ds.A.toFixed(2)} / ${s.ds.B.toFixed(2)}`;
+    hPlan.textContent = 'SP' + (s.plan + 1);
+    hDelay.textContent = s.avgDelay.toFixed(1);
+  }, 500);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduce) sim.start(); else { for (let i = 0; i < 400; i++) sim.tick(); sim.draw(); }
+  addEventListener('themechange', () => sim.draw());
+</script>
+</body>
+</html>

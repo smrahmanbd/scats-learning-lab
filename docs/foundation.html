@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SCATS Foundation</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<div class="wrap layout">
+  <aside class="route" aria-label="On this page"><span class="level-name">Foundation</span><ol></ol></aside>
+  <main class="content">
+    <header class="level-head prose">
+      <span class="level-tag"><span class="shield">1</span>Level 1 of 3</span>
+      <h1>How an adaptive signal thinks</h1>
+      <p class="lede">The vocabulary of signal timing, how SCATS measures traffic with one loop per lane, and why that single number, the degree of saturation, drives everything else.</p>
+    </header>
+
+    <section class="prose">
+      <h2 id="what" data-short="What SCATS is">What SCATS is</h2>
+      <p>SCATS, the Sydney Coordinated Adaptive Traffic System, was developed by the New South Wales Department of Main Roads from the 1970s and is owned and run today by Transport for NSW. It is one of the most widely deployed adaptive signal systems in the world, reported at more than 60,000 intersections across over 200 cities.</p>
+      <p>Its idea is simple. Instead of running a timing plan prepared months ago, SCATS measures how well each green was used in the last cycle, then nudges the timings for the next cycle. Small, frequent corrections keep the signals in step with real traffic.</p>
+      <dl class="defs">
+        <dt>Adaptive</dt><dd>Timings change automatically from detector data, cycle by cycle.</dd>
+        <dt>Coordinated</dt><dd>Neighbouring signals share a cycle and are offset so platoons meet green lights.</dd>
+        <dt>Plan-based</dt><dd>SCATS does not invent arbitrary timings. It chooses and blends from a library of engineer-approved split and offset plans.</dd>
+      </dl>
+    </section>
+
+    <section class="prose">
+      <h2 id="arch" data-short="Architecture">Two levels of control</h2>
+      <p>SCATS splits decisions by time scale. Fast decisions live in the roadside controller; slower, network-wide decisions live in a regional computer.</p>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>SCATS hierarchy</h4><span class="hint">Who decides what, and how often</span></div>
+      <div class="bay-body" style="overflow-x:auto">
+        <svg viewBox="0 0 860 300" role="img" aria-label="SCATS hierarchy: central management, regional computers, local controllers, detectors" style="min-width:640px;width:100%;height:auto">
+          <style>.bx{fill:var(--surface);stroke:var(--fg);stroke-width:1.5}.tx{font:600 15px Barlow,sans-serif;fill:var(--fg)}.st{font:13px Barlow,sans-serif;fill:var(--muted)}.ln{stroke:var(--muted);stroke-width:1.5;fill:none}.hl{fill:var(--sunk);stroke:var(--amber);stroke-width:2}</style>
+          <rect class="bx" x="300" y="12" width="260" height="52" rx="6"/><text class="tx" x="430" y="35" text-anchor="middle">Central management system</text><text class="st" x="430" y="53" text-anchor="middle">monitoring, data, operator control</text>
+          <path class="ln" d="M430 64 V84 M220 84 H640 M220 84 V100 M640 84 V100"/>
+          <rect class="hl" x="100" y="100" width="240" height="64" rx="6"/><text class="tx" x="220" y="124" text-anchor="middle">Regional computer: strategic</text><text class="st" x="220" y="143" text-anchor="middle">every cycle: cycle length, splits,</text><text class="st" x="220" y="158" text-anchor="middle">offsets, subsystem marriage</text>
+          <rect class="hl" x="520" y="100" width="240" height="64" rx="6"/><text class="tx" x="640" y="124" text-anchor="middle">Regional computer: strategic</text><text class="st" x="640" y="143" text-anchor="middle">one per area, up to hundreds</text><text class="st" x="640" y="158" text-anchor="middle">of intersections</text>
+          <path class="ln" d="M220 164 V184 M110 184 H330 M110 184 V200 M220 184 V200 M330 184 V200 M640 164 V200"/>
+          <g><rect class="bx" x="62" y="200" width="96" height="48" rx="6"/><text class="tx" x="110" y="222" text-anchor="middle">Local</text><text class="st" x="110" y="239" text-anchor="middle">controller</text></g>
+          <g><rect class="bx" x="172" y="200" width="96" height="48" rx="6"/><text class="tx" x="220" y="222" text-anchor="middle">Local</text><text class="st" x="220" y="239" text-anchor="middle">controller</text></g>
+          <g><rect class="bx" x="282" y="200" width="96" height="48" rx="6"/><text class="tx" x="330" y="222" text-anchor="middle">Local</text><text class="st" x="330" y="239" text-anchor="middle">controller</text></g>
+          <g><rect class="bx" x="592" y="200" width="96" height="48" rx="6"/><text class="tx" x="640" y="222" text-anchor="middle">Local</text><text class="st" x="640" y="239" text-anchor="middle">controller</text></g>
+          <text class="st" x="485" y="222" text-anchor="middle">Tactical, every second:</text><text class="st" x="485" y="239" text-anchor="middle">gap-out, skip, extend, priority</text>
+          <path class="ln" d="M110 248 V266 M220 248 V266 M330 248 V266 M640 248 V266"/>
+          <text class="st" x="220" y="288" text-anchor="middle">stop-line loops in every lane, pedestrian push-buttons</text>
+          <text class="st" x="640" y="288" text-anchor="middle">loops, buttons, transit requests</text>
+        </svg>
+      </div>
+    </div>
+    <section class="prose">
+      <p><strong>Tactical</strong> control runs in the local controller every second: it ends a green early when traffic has gone (gap-out), skips a phase nobody is waiting for, and responds to buses or emergency vehicles. <strong>Strategic</strong> control runs in the regional computer once per cycle: it measures demand, then sets the cycle length, the split plan and the offsets for a group of intersections called a subsystem.</p>
+      <p>Each intersection also has a fallback. If communications fail it can run <strong>Flexilink</strong> (time-of-day plans with clocks kept in step) or <strong>Isolated</strong> (local vehicle actuation). Full adaptive operation is called <strong>Masterlink</strong>.</p>
+    </section>
+
+    <section class="prose">
+      <h2 id="vocab" data-short="Timing vocabulary">The timing vocabulary</h2>
+      <dl class="defs">
+        <dt>Phase</dt><dd>A set of movements that may run together. Here: A = main road, B = side road.</dd>
+        <dt>Cycle (RL)</dt><dd>Time for every phase to run once, including intergreens.</dd>
+        <dt>Split</dt><dd>Each phase's share of the available green. SCATS keeps a library of split plans (SP1 to SP4 here).</dd>
+        <dt>Intergreen</dt><dd>Amber plus all-red between phases. Lost to traffic, so longer cycles waste a smaller share of time.</dd>
+        <dt>Offset</dt><dd>When a cycle starts at one intersection compared with a reference one. Covered in Advanced.</dd>
+      </dl>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>Build a cycle</h4><span class="hint">Change the cycle and split and watch the greens</span></div>
+      <div class="bay-body bay-split">
+        <div><canvas class="chart" id="cycCv" style="height:120px" aria-label="Cycle timing bar"></canvas>
+          <div class="formula" id="cycF"></div></div>
+        <div class="controls">
+          <div class="ctl"><label for="cycC">Cycle length</label><output id="cycCo"></output><input type="range" id="cycC" min="40" max="140" value="90"></div>
+          <div class="ctl"><label for="cycS">Phase A share of green</label><output id="cycSo"></output><input type="range" id="cycS" min="20" max="80" value="60"></div>
+          <div class="ctl"><label for="cycI">Intergreen per phase</label><output id="cycIo"></output><input type="range" id="cycI" min="4" max="8" value="5"></div>
+        </div>
+      </div>
+    </div>
+
+    <section class="prose">
+      <h2 id="ds" data-short="Degree of saturation">Measuring demand: the degree of saturation</h2>
+      <p>SCATS does not count vehicles directly. During each green it watches the loop at the stop line and adds up the <em>gap time</em>, when nothing is over the loop. A perfectly saturated stream of cars still leaves a small gap between each pair, the standard space time <code>h</code>. Gap time beyond that is green that was wasted.</p>
+      <div class="formula">wasted green  = T − n·h
+used green g' = g − (T − n·h)
+DS            = g' / g
+VK            = DS · g · MF / 3600     (car-equivalent volume)</div>
+      <dl class="defs">
+        <dt>g</dt><dd>green time available to the movement (s)</dd>
+        <dt>T</dt><dd>total unoccupied time at the loop during that green (s)</dd>
+        <dt>n</dt><dd>vehicles detected, which equals the number of gaps</dd>
+        <dt>h</dt><dd>standard space time: gap per vehicle at saturation flow (s)</dd>
+        <dt>MF</dt><dd>maximum flow, learned automatically (veh/h of green)</dd>
+      </dl>
+      <p>DS near 1 means the green was fully used. DS of 0.4 means more than half the green was empty road. Because DS is measured in time rather than vehicles, trucks and cars are handled consistently: a truck occupies the loop for longer, exactly as it uses more green.</p>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>DS calculator</h4><span class="hint">A simulated loop record for one green. Bars are vehicles over the loop.</span></div>
+      <div class="bay-body">
+        <canvas class="chart" id="dsCv" style="height:110px" aria-label="Loop occupancy during one green"></canvas>
+        <div class="bay-split">
+          <div class="readout">
+            <div><b id="dsT" class="num">–</b><span>gap time T (s)</span></div>
+            <div><b id="dsN" class="num">–</b><span>vehicles n</span></div>
+            <div><b id="dsW" class="num">–</b><span>wasted T − n·h (s)</span></div>
+            <div><b id="dsG" class="num">–</b><span>used green g' (s)</span></div>
+            <div><b id="dsV" class="num">–</b><span>DS</span></div>
+            <div><b id="dsK" class="num">–</b><span>VK (car-equiv.)</span></div>
+          </div>
+          <div class="controls">
+            <div class="ctl"><label for="dsGr">Green time g</label><output id="dsGro"></output><input type="range" id="dsGr" min="10" max="60" value="30"></div>
+            <div class="ctl"><label for="dsQ">Arrival flow during green (veh/h)</label><output id="dsQo"></output><input type="range" id="dsQ" min="100" max="2400" step="50" value="900"></div>
+            <div class="ctl"><label for="dsH">Standard space time h</label><output id="dsHo"></output><input type="range" id="dsH" min="0.6" max="2.4" step="0.05" value="1.55"></div>
+            <div><button class="btn ghost" type="button" id="dsNew">New arrivals</button></div>
+          </div>
+        </div>
+        <p class="muted" style="margin:0;font-size:.92rem">Saturation here is one vehicle per 2.0 s (1800 veh/h) and each vehicle covers the loop for 0.45 s, so the true h is 1.55 s. Push the flow above 1800 veh/h to see DS settle near 1; set h too small and DS is under-estimated.</p>
+      </div>
+    </div>
+
+    <section class="prose">
+      <h2 id="live" data-short="Live intersection">Fixed time, actuated and SCATS, side by side</h2>
+      <p>Three controllers on the same intersection and the same arrivals. <strong>Fixed</strong> runs a 90 s plan regardless of traffic. <strong>Actuated</strong> uses the loops to end greens early (gap-out) but keeps a fixed maximum. <strong>SCATS</strong> adds the strategic layer: after every cycle it computes DS, moves the cycle length towards a target DS of 0.9, and votes on the best of four split plans.</p>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>Live intersection</h4>
+        <div class="seg" role="group" aria-label="Controller">
+          <button type="button" data-mode="fixed">Fixed</button><button type="button" data-mode="actuated">Actuated</button><button type="button" data-mode="scats" aria-pressed="true">SCATS</button>
+        </div></div>
+      <div class="bay-body">
+        <div class="bay-split">
+          <canvas class="sim" id="liveCv" aria-label="Intersection simulation"></canvas>
+          <div class="controls">
+            <div class="ctl"><label for="lvMain">Main road, per approach</label><output id="lvMaino"></output><input type="range" id="lvMain" min="100" max="900" step="25" value="600"></div>
+            <div class="ctl"><label for="lvSide">Side road, per approach</label><output id="lvSideo"></output><input type="range" id="lvSide" min="50" max="700" step="25" value="300"></div>
+            <div class="ctl"><label for="lvSpd">Simulation speed</label><output id="lvSpdo"></output><input type="range" id="lvSpd" min="1" max="30" value="6"></div>
+            <div class="readout">
+              <div><b id="lvC">–</b><span>cycle (s)</span></div><div><b id="lvP">–</b><span>split plan</span></div>
+              <div><b id="lvDs">–</b><span>DS A / B</span></div><div><b id="lvD">–</b><span>mean delay (s)</span></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" type="button" id="lvPause">Pause</button><button class="btn ghost" type="button" id="lvReset">Reset</button></div>
+          </div>
+        </div>
+        <canvas class="chart" id="lvChart" aria-label="Cycle length and DS over recent cycles"></canvas>
+        <div class="legend"><span><i style="background:var(--fg)"></i>cycle length ÷ 100</span><span><i style="background:var(--go)"></i>DS phase A</span><span><i style="background:var(--phase-b);height:3px"></i>DS phase B</span><span><i style="background:var(--amber)"></i>target DS 0.9</span></div>
+      </div>
+    </div>
+    <div class="bay">
+      <div class="bay-head"><h4>Race the controllers</h4><span class="hint">One simulated hour each, identical random arrivals, peak in the middle</span></div>
+      <div class="bay-body">
+        <div><button class="btn" type="button" id="raceBtn">Run the race</button></div>
+        <p class="muted" style="margin:0;font-size:.92rem">At a single isolated intersection SCATS and good vehicle actuation usually finish close together, and either can win on a given day: both end greens when traffic clears. SCATS earns its keep through coordination of many intersections, which the Advanced corridor shows.</p>
+        <div class="table-scroll"><table class="data" id="raceT"><thead><tr><th>Controller</th><th>Mean delay (s/veh)</th><th>Mean queue (veh)</th><th>Vehicles served</th><th>Cycles run</th></tr></thead><tbody><tr><td colspan="5" class="muted">Press "Run the race".</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <section class="prose">
+      <h2 id="webster" data-short="Webster">Where fixed-time plans come from</h2>
+      <p>Fixed-time plans are usually designed with Webster's formula, which balances lost time against queueing for one assumed demand. SCATS effectively re-solves this problem every cycle from measured DS, which is why it copes with demand that differs from the design day.</p>
+      <div class="formula">C0 = (1.5·L + 5) / (1 − Y)      L = total lost time,  Y = Σ critical flow ratios (q/s)</div>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>Webster calculator</h4></div>
+      <div class="bay-body bay-split">
+        <div class="controls">
+          <div class="ctl"><label for="wL">Lost time L (s)</label><output id="wLo"></output><input type="range" id="wL" min="4" max="20" value="10"></div>
+          <div class="ctl"><label for="wA">Main road flow ratio y_A</label><output id="wAo"></output><input type="range" id="wA" min="0.05" max="0.6" step="0.01" value="0.35"></div>
+          <div class="ctl"><label for="wB">Side road flow ratio y_B</label><output id="wBo"></output><input type="range" id="wB" min="0.05" max="0.5" step="0.01" value="0.2"></div>
+        </div>
+        <div class="readout"><div><b id="wC">–</b><span>optimum cycle C0 (s)</span></div><div><b id="wY">–</b><span>Y</span></div><div><b id="wS">–</b><span>green split A / B (s)</span></div></div>
+      </div>
+    </div>
+
+    <section class="prose">
+      <h2 id="sumo" data-short="Run it in SUMO">Run it in SUMO</h2>
+      <p>The same ideas run in a microscopic simulator. The <a href="sumo.html">SUMO code page</a> explains installation; these three scripts make up the Foundation lab.</p>
+      <div class="runit"><h4>Lab F1: walk through DS cycle by cycle</h4>
+        <pre><code>python foundation/01_ds_lab.py --lane W_J1_1 --cycles 12
+python foundation/01_ds_lab.py --h 1.0      # what if h is mis-calibrated?</code></pre>
+        <p>Prints g, T, n, wasted green, g', DS and VK for every cycle of one loop. Peak cycles reach DS ≈ 0.9; off-peak cycles sit near 0.3.</p></div>
+      <div class="runit"><h4>Lab F2: calibrate h and MF</h4>
+        <pre><code>python foundation/02_calibrate_h.py</code></pre>
+        <p>Overloads the main road and measures gap per vehicle at saturation. Our run gives <strong>h = 1.62 s</strong> and <strong>MF ≈ 1730 veh/h</strong>, the values the controller uses.</p></div>
+      <div class="runit"><h4>Lab F3: fixed vs actuated vs SCATS</h4>
+        <pre><code>python foundation/03_fixed_vs_scats.py          # add --gui to watch SCATS in sumo-gui</code></pre>
+        <figure><img src="assets/results/foundation_compare.png" alt="Bar charts of mean delay and stops for fixed, actuated and SCATS at a single intersection" loading="lazy"><figcaption>Single intersection, one hour with a peak in the middle (results from the repository's SUMO run).</figcaption></figure>
+        <figure><img src="assets/results/foundation_ds_by_phase.png" alt="Cycle length, greens and DS per phase over the hour under SCATS" loading="lazy"><figcaption>Under SCATS the cycle grows from 40 s to about 70 s as peak DS approaches 1, then falls back.</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="prose">
+      <h2 id="quiz" data-short="Quiz">Check your understanding</h2>
+      <div class="quiz" id="quizF"></div>
+      <p>Ready? Continue to <a href="advanced.html">Advanced</a>, where these pieces become a coordinated network.</p>
+    </section>
+  </main>
+</div>
+<script src="js/engine.js"></script>
+<script src="js/intersection-sim.js"></script>
+<script src="js/quizdata.js"></script>
+<script src="js/common.js"></script>
+<script src="js/foundation.js"></script>
+</body>
+</html>

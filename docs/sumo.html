@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SCATS in SUMO</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<div class="wrap layout">
+  <aside class="route" aria-label="On this page"><span class="level-name">SUMO code</span><ol></ol></aside>
+  <main class="content">
+    <header class="level-head prose">
+      <h1>SCATS in SUMO</h1>
+      <p class="lede">A SCATS-style controller written in Python that drives Eclipse SUMO through TraCI. It reads stop-line loops every second, runs tactical control in each intersection and strategic control per subsystem, and writes logs and figures for every lab on this site.</p>
+    </header>
+
+    <section class="prose">
+      <h2 id="install" data-short="Install">Install and run</h2>
+      <p>Python 3.9 or newer. SUMO itself installs from pip, so no separate download is needed (a system SUMO with <code>SUMO_HOME</code> set also works).</p>
+      <pre><code>git clone https://github.com/smrahmanbd/scats-learning-lab.git
+cd scats-learning-lab/sumo
+python -m pip install -r requirements.txt      # eclipse-sumo, traci, sumolib, numpy, matplotlib
+
+python foundation/03_fixed_vs_scats.py --gui   # watch SCATS in sumo-gui
+python run_all.py                              # every lab, about 10 minutes
+python tools/export_site_results.py            # copy figures and tables into the website</code></pre>
+      <p>Each script accepts <code>--gui</code>, <code>--seed</code>, <code>--end</code> (demand duration in seconds) and <code>--out</code>. Results go to <code>sumo/results/&lt;level&gt;/</code>.</p>
+    </section>
+
+    <section class="prose">
+      <h2 id="layout" data-short="Repository layout">Repository layout</h2>
+      <pre><code>scats-learning-lab/
+├── docs/                         the website (GitHub Pages)
+└── sumo/
+    ├── scats/
+    │   ├── core.py               DS, VK, MF, cycle length, split selection, voting,
+    │   │                         offsets, marriage/divorce, Webster (no SUMO needed)
+    │   ├── controller.py         Intersection (tactical), Subsystem (strategic), Region
+    │   ├── network.py            corridor generator (netconvert) + stop-line loops + demand
+    │   ├── runner.py             Scenario, run(), baselines, logs, tripinfo metrics
+    │   ├── scenarios.py          the Foundation and Advanced scenarios
+    │   └── plots.py              figures
+    ├── foundation/  01_ds_lab.py  02_calibrate_h.py  03_fixed_vs_scats.py
+    ├── advanced/    01_corridor_scats.py  02_ablation_study.py
+    ├── mastery/     01_cv_ds_estimation.py  02_rl_split_selection.py
+    │                03_maxpressure_hybrid.py  04_detector_faults.py  05_spat_prediction.py
+    ├── tests/test_core.py        unit tests for the algorithms
+    ├── tools/export_site_results.py
+    └── run_all.py</code></pre>
+    </section>
+
+    <section class="prose">
+      <h2 id="network" data-short="The test network">The test network</h2>
+      <p><code>network.build_corridor(n, spacing)</code> generates an east-west arterial with <code>n</code> signalised intersections and a side street at each. Arterial approaches have three lanes (right+through, through, exclusive left) so the protected-turn phase has its own loop; side streets have two. Every lane entering a junction gets an induction loop 2 m before the stop line, named <code>loop_&lt;lane id&gt;</code>.</p>
+      <dl class="defs">
+        <dt>Foundation</dt><dd>1 intersection, 2 phases (A main, B side), off-peak / peak / off-peak, 1 hour.</dd>
+        <dt>Advanced</dt><dd>4 intersections, 300 m apart, 3 phases (A main, B protected turn, C side), two subsystems J1–J2 and J3–J4 that may marry, eastbound then westbound peak, buses every 4 minutes, 90 minutes.</dd>
+      </dl>
+    </section>
+
+    <section class="prose">
+      <h2 id="core" data-short="Core algorithms">Core algorithms</h2>
+      <p>The website's JavaScript simulators use a line-for-line port of these functions (<code>docs/js/engine.js</code>).</p>
+      <pre><code>def degree_of_saturation(g, T, n, h):
+    """DS = g'/g,  g' = g - (T - n*h)"""
+    if g &lt;= 0:
+        return 0.0
+    return max(0.0, (g - (T - n * h)) / g)
+
+def reconstituted_flow(ds, g, mf):
+    return ds * g * mf / 3600.0          # VK
+
+def next_cycle_length(current, ds, p):
+    desired = current * ds / p.target_ds if ds &gt; 0 else p.l_min
+    up = p.step_up_fast if ds &gt;= p.fast_ds else p.step_up
+    delta = max(-p.step_down, min(up, desired - current))
+    return max(p.l_min, min(p.l_max, current + delta))
+
+def predict_plan_ds(ds, g_now, g_plan):
+    return {p: ds[p] * g_now[p] / g_plan[p] for p in ds}
+
+class Voter:                              # 2 of 3 for splits, 4 of 5 for offsets
+    def vote(self, choice):
+        self.history.append(choice)
+        if choice != self.current and list(self.history).count(choice) &gt;= self.needed:
+            self.current = choice
+        return self.current</code></pre>
+    </section>
+
+    <section class="prose">
+      <h2 id="controller" data-short="The controller">How the controller runs</h2>
+      <p>Every simulation second the runner reads all loop and lane subscriptions in one TraCI call and passes them to <code>Region.step()</code>:</p>
+      <ol>
+        <li><strong>Transit requests:</strong> buses within 100 m of a stop line request the phase serving their lane.</li>
+        <li><strong>Master clocks:</strong> when a subsystem's cycle ends, the strategic layer computes the next cycle length from its CI, votes on the offset plan, and runs marriage logic with its neighbour. A married subsystem follows its partner's clock.</li>
+        <li><strong>Intersections:</strong> each loop meter adds unoccupied time and new vehicles during green. The current phase ends at its planned green or earlier by gap-out (except the coordinated phase), followed by amber and all-red. Skippable phases with no demand are skipped and their time carried forward.</li>
+        <li><strong>End of an intersection cycle:</strong> DS per phase is the highest DS among its strategic loops; the split plan is voted on; the next cycle length is chosen so the intersection drifts back to its offset (at most ±20% per cycle).</li>
+      </ol>
+      <pre><code>from scats.runner import run, mode_config
+from scats.scenarios import advanced
+
+cfg = mode_config("scats", bus_priority=True)       # or "fixed", "actuated"
+res = run(advanced(), cfg, "my_run", "results/mine", seed=3, gui=True)
+print(res["avg_delay"], res["stops_per_veh"], res["bus_avg_delay"])</code></pre>
+    </section>
+
+    <section class="prose">
+      <h2 id="hooks" data-short="Research hooks">Research hooks</h2>
+      <p>New ideas plug into <code>ControllerConfig</code> without touching the rest of SCATS:</p>
+      <div class="table-scroll"><table class="data">
+        <thead><tr><th>Hook</th><th>Signature</th><th>Used by</th></tr></thead>
+        <tbody>
+          <tr><td><code>ds_source</code></td><td><code>"loop"</code> or <code>"cv"</code> + <code>cv_penetration</code></td><td>Mastery 1</td></tr>
+          <tr><td><code>split_selector</code></td><td><code>(ix, ds, g_now, plan_greens) → plan index</code></td><td>Mastery 2</td></tr>
+          <tr><td><code>green_allocator</code></td><td><code>(ix, C, greens) → greens</code></td><td>Mastery 3</td></tr>
+          <tr><td><code>sensor_filter</code></td><td><code>(lane, occ, ids, t) → (occ, ids)</code></td><td>Mastery 4</td></tr>
+          <tr><td><code>fault_handling</code></td><td><code>"none" | "exclude" | "impute"</code></td><td>Mastery 4</td></tr>
+          <tr><td><code>on_cycle_end</code></td><td><code>(ix, record) → None</code></td><td>your logging</td></tr>
+          <tr><td><code>adapt_cycle / adapt_splits / adapt_offsets</code></td><td>booleans</td><td>Advanced 2 ablation</td></tr>
+          <tr><td><code>pure_controller</code> (in <code>run()</code>)</td><td><code>(net, tls_ids) → object with step()</code></td><td>max-pressure baseline</td></tr>
+        </tbody></table></div>
+    </section>
+
+    <section class="prose">
+      <h2 id="params" data-short="Parameters">Default parameters</h2>
+      <div class="table-scroll"><table class="data"><thead><tr><th>Parameter</th><th>Value</th><th>Meaning</th></tr></thead><tbody>
+        <tr><td>LMIN / LMAX / stretch</td><td>40 / 140 / 110 s</td><td>cycle bounds and stretch threshold</td></tr>
+        <tr><td>target DS</td><td>0.90</td><td>DS the CI is steered towards</td></tr>
+        <tr><td>cycle step</td><td>+6 (+9 if DS ≥ 1) / −6 s</td><td>change per cycle</td></tr>
+        <tr><td>h</td><td>1.6 s</td><td>standard space time (calibrated, Lab F2)</td></tr>
+        <tr><td>MF</td><td>1800 veh/h, learned</td><td>maximum flow per lane</td></tr>
+        <tr><td>gap setting</td><td>3 s</td><td>gap-out timer</td></tr>
+        <tr><td>amber / all-red</td><td>3 / 2 s</td><td>intergreen</td></tr>
+        <tr><td>marry / divorce</td><td>VK 18 / 10, 3 votes</td><td>linking with hysteresis</td></tr>
+        <tr><td>split / offset voting</td><td>2 of 3 / 4 of 5</td><td>plan change damping</td></tr>
+      </tbody></table></div>
+      <p class="muted">These are illustrative teaching values chosen for the test network, not official SCATS parameters.</p>
+    </section>
+
+    <section class="prose">
+      <h2 id="own" data-short="Your own network">Using your own network</h2>
+      <ol>
+        <li>Build or import a network with <code>netconvert</code> (for example from OpenStreetMap) with the junctions you want as <code>traffic_light</code>.</li>
+        <li>Add an <code>inductionLoop</code> named <code>loop_&lt;lane&gt;</code> near the stop line of every incoming lane.</li>
+        <li>Write <code>PhaseDef</code> rules for each junction's phases. Rules map approach class and turn (<code>s</code>, <code>l</code>, <code>r</code>) to <code>G</code> or <code>g</code>; the controller builds SUMO state strings from the controlled links. Junctions with more than four arms need a custom approach classifier in <code>Intersection.__init__</code>.</li>
+        <li>Group intersections into subsystems, pick a CI for each, and list neighbouring pairs that may marry.</li>
+      </ol>
+    </section>
+
+    <section class="prose">
+      <h2 id="tests" data-short="Tests">Tests</h2>
+      <pre><code>cd sumo
+python -m pytest tests -q</code></pre>
+      <p>The unit tests check the DS formula against worked examples, bounded cycle steps, split prediction, voting, offset plans and marriage hysteresis.</p>
+    </section>
+  </main>
+</div>
+<script src="js/common.js"></script>
+</body>
+</html>

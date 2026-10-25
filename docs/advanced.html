@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SCATS Advanced</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<div class="wrap layout">
+  <aside class="route" aria-label="On this page"><span class="level-name">Advanced</span><ol></ol></aside>
+  <main class="content">
+    <header class="level-head prose">
+      <span class="level-tag"><span class="shield">2</span>Level 2 of 3</span>
+      <h1>Every mechanism, working together</h1>
+      <p class="lede">Strategic control turns DS into cycle lengths, split plans and offsets for groups of intersections; tactical control keeps each green honest second by second. This level takes each mechanism apart, then runs them all on a four-intersection corridor in SUMO.</p>
+    </header>
+
+    <section class="prose">
+      <h2 id="subsys" data-short="Subsystems and the CI">Subsystems and the critical intersection</h2>
+      <p>SCATS groups intersections into <strong>subsystems</strong>, typically one to ten signals that must share a cycle to be coordinated. Each subsystem has one <strong>critical intersection (CI)</strong>, usually the busiest. The CI's DS sets the subsystem cycle length; the other intersections follow that cycle with their own split plans and with offsets relative to the CI.</p>
+      <p>Every cycle the regional computer runs the same loop:</p>
+      <ol>
+        <li>Collect DS and VK for every strategic loop of every intersection.</li>
+        <li>Cycle length: move the subsystem cycle towards the value that would hold the CI at the target DS.</li>
+        <li>Splits: at each intersection, vote for the split plan that best balances DS across phases.</li>
+        <li>Offsets: vote for the offset plan that suits the directional volumes.</li>
+        <li>Linking: decide whether neighbouring subsystems should marry or divorce.</li>
+      </ol>
+    </section>
+
+    <section class="prose">
+      <h2 id="cycle" data-short="Cycle length">Cycle length: bounded steps towards a target DS</h2>
+      <p>If the CI ran at DS with cycle C, the cycle that would have produced the target DS is about <code>C × DS / target</code>. SCATS never jumps there. It moves a few seconds per cycle, a little faster when DS is above 1, always inside <code>LMIN</code> and <code>LMAX</code>. Above the <strong>stretch</strong> cycle, extra time goes to one nominated phase, normally the main road, instead of being shared by the split plan.</p>
+      <div class="formula">desired = C · DS / DS_target
+step    = clamp(desired − C, −down, +up)    up = 9 s if DS ≥ 1 else 6 s, down = 6 s
+C_next  = clamp(C + step, LMIN, LMAX)</div>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>Cycle length controller</h4><span class="hint">Set the CI's DS, then step cycles or play a rush hour</span></div>
+      <div class="bay-body">
+        <div class="bay-split">
+          <canvas class="chart" id="clCv" style="height:220px" aria-label="Cycle length over cycles"></canvas>
+          <div class="controls">
+            <div class="ctl"><label for="clDs">DS at the CI this cycle</label><output id="clDso"></output><input type="range" id="clDs" min="0.1" max="1.3" step="0.01" value="0.95"></div>
+            <div class="ctl"><label for="clT">Target DS</label><output id="clTo"></output><input type="range" id="clT" min="0.7" max="1.0" step="0.01" value="0.9"></div>
+            <div class="ctl"><label for="clMax">LMAX</label><output id="clMaxo"></output><input type="range" id="clMax" min="80" max="180" step="5" value="140"></div>
+            <div class="ctl"><label for="clStr">Stretch cycle</label><output id="clStro"></output><input type="range" id="clStr" min="60" max="160" step="5" value="110"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button" id="clStep">Step one cycle</button><button class="btn ghost" type="button" id="clPlay">Play rush hour</button><button class="btn ghost" type="button" id="clReset">Reset</button></div>
+          </div>
+        </div>
+        <div class="formula" id="clF"></div>
+        <canvas class="chart" id="clBar" style="height:56px" aria-label="Green allocation at the current cycle"></canvas>
+        <div class="legend"><span><i style="background:var(--fg)"></i>cycle length</span><span><i style="background:var(--go)"></i>DS × 100</span><span><i style="background:var(--muted)"></i>LMIN, LMAX</span></div>
+      </div>
+    </div>
+
+    <section class="prose">
+      <h2 id="splits" data-short="Split plans and voting">Split plans: equalise DS, then vote</h2>
+      <p>For each candidate split plan, SCATS predicts what DS every phase would have had: the demand needed <code>DS × g</code> seconds of used green, so with a different green <code>g_plan</code> the DS would be <code>DS × g / g_plan</code>. The best plan minimises the highest predicted DS, which equalises the phases. A plan is only put into service after it wins consistently, here 2 of the last 3 cycles.</p>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>Split plan selector</h4><span class="hint">Three phases: A main road, B protected turn, C side road. Cycle 90 s.</span></div>
+      <div class="bay-body">
+        <div class="bay-split">
+          <div class="controls">
+            <div class="ctl"><label for="spA">DS phase A (last cycle)</label><output id="spAo"></output><input type="range" id="spA" min="0" max="1.3" step="0.01" value="0.97"></div>
+            <div class="ctl"><label for="spB">DS phase B</label><output id="spBo"></output><input type="range" id="spB" min="0" max="1.3" step="0.01" value="0.55"></div>
+            <div class="ctl"><label for="spC">DS phase C</label><output id="spCo"></output><input type="range" id="spC" min="0" max="1.3" step="0.01" value="0.62"></div>
+          </div>
+          <div class="controls">
+            <div><button class="btn" type="button" id="spVote">End this cycle: vote</button> <button class="btn ghost" type="button" id="spReset">Reset</button></div>
+            <div class="readout"><div><b id="spWin">–</b><span>best this cycle</span></div><div><b id="spCur">SP1</b><span>plan in service</span></div><div><b id="spHist">–</b><span>last 3 votes</span></div></div>
+          </div>
+        </div>
+        <div class="table-scroll"><table class="data" id="spT"><thead><tr><th>Plan</th><th>Split A/B/C</th><th>Greens (s)</th><th>Predicted DS A / B / C</th><th>Highest</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <section class="prose">
+      <h2 id="offsets" data-short="Offsets">Offsets and green waves</h2>
+      <p>Offsets decide which direction gets a green wave. SCATS keeps a few offset plans per subsystem link and picks one from the directional volumes (VK): the heavier direction gets progression; balanced traffic gets a simultaneous or alternating pattern. Offset changes disrupt traffic, so they need stronger agreement: 4 of the last 5 cycles in this lab.</p>
+      <div class="formula">OP1 eastbound wave : offset_i =  (x_i − x_ref) / v  (mod C)
+OP2 westbound wave : offset_i = −(x_i − x_ref) / v  (mod C)
+OP3 simultaneous   : offset_i = 0
+OP4 alternate      : offset_i = C/2 at every second intersection</div>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>Time-space diagram</h4><span class="hint">Green bands at four intersections; lines are vehicles at the progression speed</span></div>
+      <div class="bay-body">
+        <canvas class="chart" id="tsCv" style="height:330px" aria-label="Time-space diagram"></canvas>
+        <div class="bay-split">
+          <div class="controls">
+            <div class="seg" role="group" aria-label="Offset plan" id="tsPlans"><button type="button" data-p="0" aria-pressed="true">OP1</button><button type="button" data-p="1">OP2</button><button type="button" data-p="2">OP3</button><button type="button" data-p="3">OP4</button></div>
+            <div class="ctl"><label for="tsC">Cycle</label><output id="tsCo"></output><input type="range" id="tsC" min="40" max="140" value="80"></div>
+            <div class="ctl"><label for="tsX">Spacing between signals</label><output id="tsXo"></output><input type="range" id="tsX" min="150" max="800" step="10" value="300"></div>
+            <div class="ctl"><label for="tsV">Progression speed</label><output id="tsVo"></output><input type="range" id="tsV" min="8" max="18" step="0.5" value="12"></div>
+          </div>
+          <div class="controls">
+            <div class="readout"><div><b id="tsBe">–</b><span>eastbound band (s)</span></div><div><b id="tsBw">–</b><span>westbound band (s)</span></div></div>
+            <div class="ctl"><label for="tsE">VK eastbound</label><output id="tsEo"></output><input type="range" id="tsE" min="0" max="200" value="140"></div>
+            <div class="ctl"><label for="tsW">VK westbound</label><output id="tsWo"></output><input type="range" id="tsW" min="0" max="200" value="60"></div>
+            <div><button class="btn ghost" type="button" id="tsAuto">Let SCATS choose (vote)</button> <span class="muted" id="tsVoteTxt"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="prose">
+      <h2 id="marriage" data-short="Marriage and divorce">Marriage and divorce</h2>
+      <p>Two adjacent subsystems can be <strong>married</strong>: they run on a common cycle, the larger of the two they each need, and share a master clock so the offset between them means something. When the traffic between them drops, coordination no longer pays for the extra cycle time, and they <strong>divorce</strong>. Separate marry and divorce thresholds (hysteresis) and a run of consecutive votes stop them flip-flopping.</p>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>Marriage logic over a day</h4><span class="hint">Link VK per cycle (noisy) and the resulting state</span></div>
+      <div class="bay-body">
+        <canvas class="chart" id="mgCv" style="height:230px" aria-label="Link volume and marriage state"></canvas>
+        <div class="bay-split">
+          <div class="controls">
+            <div class="ctl"><label for="mgM">Marry above VK</label><output id="mgMo"></output><input type="range" id="mgM" min="5" max="60" value="18"></div>
+            <div class="ctl"><label for="mgD">Divorce below VK</label><output id="mgDo"></output><input type="range" id="mgD" min="2" max="60" value="10"></div>
+          </div>
+          <div class="controls">
+            <div class="ctl"><label for="mgV">Consecutive votes needed</label><output id="mgVo"></output><input type="range" id="mgV" min="1" max="6" value="3"></div>
+            <div class="readout"><div><b id="mgSw">–</b><span>state changes</span></div><div><b id="mgPct">–</b><span>cycles married</span></div></div>
+          </div>
+        </div>
+        <div class="legend"><span><i style="background:var(--fg)"></i>link VK</span><span><i style="background:var(--go)"></i>marry threshold</span><span><i style="background:var(--stop)"></i>divorce threshold</span><span><i style="background:var(--phase-a);height:10px"></i>married</span></div>
+      </div>
+    </div>
+
+    <section class="prose">
+      <h2 id="tactical" data-short="Tactical control">Tactical control: gap-out, skipping and the coordinated phase</h2>
+      <p>The strategic layer gives each phase a planned green. The local controller then decides second by second whether that green is still useful. After the <strong>minimum green</strong>, a <strong>gap timer</strong> restarts every time a vehicle crosses the loop; if it exceeds the gap setting, the phase terminates early and its unused time passes to the next phase. Real SCATS controllers use gap, headway and waste timers together; the gap timer captures the idea.</p>
+      <p><strong>Demand-dependent phases</strong>, such as a protected turn, are skipped when nobody is waiting. The <strong>coordinated phase</strong> (the main road) is normally held rather than gapped out, because ending it early would break the green wave; spare time from other phases returns to it.</p>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>Gap-out timer</h4><span class="hint">One green, vehicles arriving at random</span></div>
+      <div class="bay-body">
+        <canvas class="chart" id="goCv" style="height:200px" aria-label="Gap timer during one green"></canvas>
+        <div class="bay-split">
+          <div class="controls">
+            <div class="ctl"><label for="goQ">Flow (veh/h)</label><output id="goQo"></output><input type="range" id="goQ" min="100" max="1800" step="50" value="700"></div>
+            <div class="ctl"><label for="goG">Gap setting</label><output id="goGo"></output><input type="range" id="goG" min="1.5" max="6" step="0.5" value="3"></div>
+          </div>
+          <div class="controls">
+            <div class="ctl"><label for="goMin">Minimum / maximum green</label><output id="goMino"></output><input type="range" id="goMin" min="5" max="20" value="8"></div>
+            <div class="readout"><div><b id="goEnd">–</b><span>green ended at (s)</span></div><div><b id="goWhy">–</b><span>reason</span></div></div>
+            <div><button class="btn ghost" type="button" id="goNew">New arrivals</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="prose">
+      <h2 id="priority" data-short="Transit priority">Public transport priority</h2>
+      <p>SCATS can receive priority requests from buses and trams. Three levels are commonly described:</p>
+      <dl class="defs">
+        <dt>High</dt><dd>A "hurry call": the transit phase is served as soon as safely possible, skipping other phases if needed. Typical for trams and emergency vehicles.</dd>
+        <dt>Medium</dt><dd>A flexible window: the current green is extended, or other phases are shortened so the transit phase starts early. Typical for buses.</dd>
+        <dt>Low</dt><dd>The vehicle waits for its phase in normal sequence.</dd>
+      </dl>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>Priority planner</h4><span class="hint">A bus arrives on the main road (phase A). Cycle 80 s: A 40 s, B 30 s, intergreens 5 s.</span></div>
+      <div class="bay-body">
+        <canvas class="chart" id="ptCv" style="height:150px" aria-label="Signal timeline with and without priority"></canvas>
+        <div class="bay-split">
+          <div class="controls">
+            <div class="ctl"><label for="ptT">Bus arrives at second</label><output id="ptTo"></output><input type="range" id="ptT" min="0" max="79" value="48"></div>
+            <div class="seg" role="group" aria-label="Priority level" id="ptLv"><button type="button" data-l="low">Low</button><button type="button" data-l="medium" aria-pressed="true">Medium</button><button type="button" data-l="high">High</button></div>
+          </div>
+          <div class="readout"><div><b id="ptD0">–</b><span>bus delay, no priority (s)</span></div><div><b id="ptD1">–</b><span>bus delay, with priority (s)</span></div><div><b id="ptX">–</b><span>action taken</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <section class="prose">
+      <h2 id="modes" data-short="Operating modes">Operating modes and fallback</h2>
+      <div class="table-scroll"><table class="data">
+        <thead><tr><th>Mode</th><th>What runs</th><th>When</th></tr></thead>
+        <tbody>
+          <tr><td>Masterlink</td><td>Full adaptive: strategic plans from the regional computer, tactical control locally</td><td>Normal operation</td></tr>
+          <tr><td>Flexilink</td><td>Time-of-day plans with synchronised clocks, so offsets still hold; local actuation within them</td><td>Communications loss or planned fallback</td></tr>
+          <tr><td>Isolated</td><td>Local vehicle actuation only, no coordination</td><td>Stand-alone sites or further degradation</td></tr>
+          <tr><td>Flashing / off</td><td>No control</td><td>Faults, power loss</td></tr>
+        </tbody></table></div>
+      <p>Detector faults are part of daily life. SCATS raises alarms for implausible loops (for example no counts for many cycles or continuous occupancy) and the engineer configures substitutes. The Mastery level tests fault-handling strategies in SUMO.</p>
+    </section>
+
+    <section class="prose">
+      <h2 id="sumo" data-short="Corridor in SUMO">The full system on a SUMO corridor</h2>
+      <p>The Advanced SUMO lab runs every mechanism above on four 3-phase intersections, 300 m apart, in two subsystems that may marry. Demand is low, then a 25-minute eastbound peak, then a westbound peak, then low again, with buses every 4 minutes in each direction.</p>
+      <div class="runit"><h4>Lab A1: SCATS vs fixed vs actuated on the corridor</h4>
+        <pre><code>python advanced/01_corridor_scats.py         # add --gui to watch</code></pre>
+        <div id="advTable" class="table-scroll"></div>
+        <figure><img src="assets/results/advanced_strategic_timeline.png" alt="SCATS strategic decisions over 90 minutes: cycle length, DS at the critical intersection, offset plan, marriage state and split plans" loading="lazy"><figcaption>Cycle length rises with each peak, the offset plan switches from eastbound (OP1) to westbound (OP2) progression and then to alternate (OP4) as traffic balances, and the two subsystems marry as the first peak builds.</figcaption></figure>
+      </div>
+      <div class="runit"><h4>Lab A2: ablation, switch one mechanism off at a time</h4>
+        <pre><code>python advanced/02_ablation_study.py</code></pre>
+        <div id="ablTable" class="table-scroll"></div>
+        <figure><img src="assets/results/advanced_ablation.png" alt="Bar charts of delay, stops and bus delay for each ablation variant" loading="lazy"><figcaption>On this corridor tactical control, marriage, offset adaptation and bus priority carry most of the benefit. Freezing the cycle at 80 s was slightly better here because 80 s happens to suit this demand; cycle adaptation pays off when demand swings further from the plan.</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="prose">
+      <h2 id="quiz" data-short="Quiz">Check your understanding</h2>
+      <div class="quiz" id="quizA"></div>
+      <p>Next: <a href="mastery.html">Mastery</a>, where these mechanisms become research questions.</p>
+    </section>
+  </main>
+</div>
+<script src="js/engine.js"></script>
+<script src="js/quizdata.js"></script>
+<script src="js/results.js"></script>
+<script src="js/common.js"></script>
+<script src="js/advanced.js"></script>
+</body>
+</html>
