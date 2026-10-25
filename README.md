@@ -14,6 +14,16 @@ for **Eclipse SUMO**.
 
 Plus a **42-question quiz bank** with explanations and an explorable **mind map**.
 
+## Study guides and slides
+
+Beginner-friendly study guides (plain-language explanations, worked hand calculations, a memory route, mind maps, an 18-question self-quiz with answers, a cheat sheet and a revision plan) and a matching slide deck with speaker notes for each level:
+
+| Level | Study guide | Slides |
+|---|---|---|
+| Foundation | [SCATS_Foundation_Study_Guide.pdf](docs/materials/SCATS_Foundation_Study_Guide.pdf) | [SCATS_Foundation_Presentation.pptx](docs/materials/SCATS_Foundation_Presentation.pptx) |
+| Advanced | [SCATS_Advanced_Study_Guide.pdf](docs/materials/SCATS_Advanced_Study_Guide.pdf) | [SCATS_Advanced_Presentation.pptx](docs/materials/SCATS_Advanced_Presentation.pptx) |
+| Mastery | [SCATS_Mastery_Study_Guide.pdf](docs/materials/SCATS_Mastery_Study_Guide.pdf) | [SCATS_Mastery_Presentation.pptx](docs/materials/SCATS_Mastery_Presentation.pptx) |
+
 ## The website
 
 Everything in `docs/` is a static site. To publish it on GitHub Pages:
