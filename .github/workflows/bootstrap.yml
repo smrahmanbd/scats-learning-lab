@@ -1,0 +1,25 @@
+# One-time helper: unpacks scats-upload.zip (uploaded through the GitHub website,
+# which cannot keep folders) into the repository, then deletes the zip.
+# Safe to delete this file once the repository is unpacked.
+name: unpack upload
+on: [push, workflow_dispatch]
+permissions:
+  contents: write
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack the uploaded archive
+        run: |
+          if [ -f scats-upload.zip ]; then
+            unzip -o scats-upload.zip -d .
+            git rm -q scats-upload.zip
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Unpack SCATS Learning Lab"
+            git push
+          else
+            echo "Nothing to unpack."
+          fi
