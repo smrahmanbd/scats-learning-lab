@@ -1,0 +1,13 @@
+name: tests
+on: [push, pull_request]
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -r sumo/requirements.txt
+      - run: cd sumo && python -m pytest tests -q
+      - name: smoke-run the foundation lab in SUMO
+        run: cd sumo && python foundation/03_fixed_vs_scats.py --end 900
