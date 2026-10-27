@@ -157,6 +157,69 @@ VK            = DS · g · MF / 3600     (car-equivalent volume)</div>
     </div>
 
     <section class="prose">
+      <h2 id="spacetime" data-short="Standard space time">The standard space time, h</h2>
+      <p>The whole DS formula rests on one small number: <b>h</b>, the standard space time. Watch a queue leave on green. Each car's <em>headway</em>, the time from one front bumper to the next, has two parts: the time the car is <em>over</em> the loop, and the time the loop is <em>empty</em> before the next car arrives.</p>
+      <div class="formula">headway = time on the loop + empty time
+at saturation flow:  h = 3600 / s − (car length + loop length) / speed</div>
+      <p>When the queue leaves as tightly as drivers can manage, that empty part is as small as it gets. That smallest gap is <b>h</b>. Every car "deserves" h seconds of empty loop; empty time beyond <code>n·h</code> is green nobody used. SCATS learns h for each lane, because it depends on the loop, the vehicles and the drivers.</p>
+    </section>
+    <div class="bay">
+      <div class="bay-head"><h4>Where h comes from</h4><span class="hint">A saturated queue crossing the stop-line loop</span></div>
+      <div class="bay-body">
+        <canvas class="chart" id="stCv" style="height:215px" aria-label="Cars crossing the stop-line loop and the loop record below"></canvas>
+        <div class="bay-split">
+          <div>
+            <div class="readout">
+              <div><b id="stHd" class="num">–</b><span>headway 3600/s (s)</span></div>
+              <div><b id="stOcc" class="num">–</b><span>time on loop (s)</span></div>
+              <div><b id="stH" class="num">–</b><span>standard space time h (s)</span></div>
+              <div><b id="stSp" class="num">–</b><span>front-to-front spacing (m)</span></div>
+            </div>
+            <p id="stNote" class="muted" style="margin:.6rem 0 0;font-size:.95rem"></p>
+          </div>
+          <div class="controls">
+            <div class="ctl"><label for="stS">Saturation flow s</label><output id="stSo"></output><input type="range" id="stS" min="1200" max="2400" step="50" value="1800"></div>
+            <div class="ctl"><label for="stL">Vehicle length</label><output id="stLo"></output><input type="range" id="stL" min="3.5" max="12" step="0.5" value="4.5"></div>
+            <div class="ctl"><label for="stLoop">Loop length</label><output id="stLoopo"></output><input type="range" id="stLoop" min="1" max="5" step="0.5" value="2"></div>
+            <div class="ctl"><label for="stV">Speed over the loop</label><output id="stVo"></output><input type="range" id="stV" min="4" max="15" step="0.5" value="6.5"></div>
+            <div><button class="btn ghost" type="button" id="stPause">Pause</button></div>
+          </div>
+        </div>
+        <p class="muted" style="margin:0;font-size:.92rem">Try a bus (12 m): it covers the loop longer, so the empty gap shrinks. A longer loop does the same. That is why h differs from lane to lane and SCATS has to learn it.</p>
+      </div>
+    </div>
+    <div class="bay">
+      <div class="bay-head"><h4>Same number of cars, three different stories</h4><span class="hint">Counting cars cannot tell these apart; gap time can</span></div>
+      <div class="bay-body">
+        <div class="seg" id="s3Seg" role="group" aria-label="Traffic story" style="margin-bottom:10px">
+          <button type="button" data-story="free" aria-pressed="true">Free flow</button>
+          <button type="button" data-story="sat" aria-pressed="false">Saturated queue</button>
+          <button type="button" data-story="jam" aria-pressed="false">Crawling jam</button>
+        </div>
+        <canvas class="chart" id="s3Cv" style="height:140px" aria-label="Loop record for one green, gaps split into needed and wasted"></canvas>
+        <div class="legend" style="margin:4px 0 10px"><span><i style="background:var(--fg);height:10px"></i>car on loop</span><span><i style="background:#2f7fd1;height:10px;opacity:.6"></i>needed gap (up to h per car)</span><span><i style="background:var(--stop);height:10px;opacity:.55"></i>wasted green</span></div>
+        <div class="bay-split">
+          <div>
+            <div class="readout">
+              <div><b id="s3T" class="num">–</b><span>empty time T (s)</span></div>
+              <div><b id="s3Need" class="num">–</b><span>needed n·h (s)</span></div>
+              <div><b id="s3W" class="num">–</b><span>wasted T − n·h (s)</span></div>
+              <div><b id="s3DS" class="num">–</b><span>SCATS DS</span></div>
+              <div><b id="s3Cnt" class="num">–</b><span>count-only DS (same every story)</span></div>
+            </div>
+            <p id="s3Verdict" style="margin:.7rem 0 0;padding:6px 10px;border-left:4px solid var(--line);background:var(--sunk);border-radius:4px"></p>
+          </div>
+          <div class="controls">
+            <div class="ctl"><label for="s3G">Green time g</label><output id="s3Go"></output><input type="range" id="s3G" min="10" max="60" value="25"></div>
+            <div class="ctl"><label for="s3N">Cars counted n</label><output id="s3No"></output><input type="range" id="s3N" min="2" max="20" value="6"></div>
+            <div class="ctl"><label for="s3H">h used by SCATS</label><output id="s3Ho"></output><input type="range" id="s3H" min="0.4" max="2" step="0.05" value="1"></div>
+          </div>
+        </div>
+        <p class="muted" style="margin:0;font-size:.92rem">Keep the count fixed and switch stories: the count-only DS never moves, but SCATS's DS goes from low (big gaps) to about 1 (gaps of exactly h) to above 1 (gaps smaller than h). Then move h: setting it too high makes every lane look busier; too low makes it look emptier. True h in these stories is 1.0 s. Illustrative numbers.</p>
+      </div>
+    </div>
+
+    <section class="prose">
       <h2 id="live" data-short="Live intersection">Fixed time, actuated and SCATS, side by side</h2>
       <p>Three controllers on the same intersection and the same arrivals. <strong>Fixed</strong> runs a 90 s plan regardless of traffic. <strong>Actuated</strong> uses the loops to end greens early (gap-out) but keeps a fixed maximum. <strong>SCATS</strong> adds the strategic layer: after every cycle it computes DS, moves the cycle length towards a target DS of 0.9, and votes on the best of four split plans.</p>
     </section>
@@ -238,5 +301,6 @@ python foundation/01_ds_lab.py --h 1.0      # what if h is mis-calibrated?</code
 <script src="js/quizdata.js"></script>
 <script src="js/common.js"></script>
 <script src="js/foundation.js"></script>
+<script src="js/spacetime.js"></script>
 </body>
 </html>
