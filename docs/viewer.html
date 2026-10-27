@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Study materials viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="css/site.css">
+<style>
+  html, body { height: 100%; }
+  body { margin: 0; display: flex; flex-direction: column; background: var(--sunk, #eceef1); }
+  body.embed .band { display: none; }
+  .vbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; background: var(--surface, #fff); border-bottom: 1px solid var(--line, #d0d4da); font: 600 0.98rem var(--display, sans-serif); }
+  .vbar .ttl { margin-right: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vbar .btn { padding: 6px 11px; font-size: 0.95rem; text-decoration: none; }
+  .vbar input { width: 3.6em; padding: 4px 6px; font: inherit; text-align: center; border: 1px solid var(--line, #ccc); border-radius: 5px; background: var(--surface, #fff); color: var(--fg, #111); }
+  .stage { flex: 1; overflow: auto; position: relative; -webkit-overflow-scrolling: touch; }
+  .slides .stage { display: flex; align-items: center; justify-content: center; padding: 12px; overflow: hidden; }
+  .slides canvas { max-width: 100%; max-height: 100%; box-shadow: 0 2px 14px rgba(0,0,0,.18); background: #fff; }
+  .guide .stage { padding: 14px 10px 40px; }
+  .page { margin: 0 auto 14px; background: #fff; box-shadow: 0 1px 8px rgba(0,0,0,.15); position: relative; }
+  .page canvas { width: 100%; height: 100%; display: block; }
+  .msg { padding: 40px 16px; text-align: center; color: var(--muted, #555); }
+  .navzone { position: absolute; top: 0; bottom: 0; width: 22%; cursor: pointer; }
+  .navzone.l { left: 0; } .navzone.r { right: 0; }
+  .muted { color: var(--muted, #555); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="vbar">
+  <span class="ttl" id="ttl">Loading…</span>
+  <span id="slideNav" hidden>
+    <button class="btn ghost" type="button" id="prev" aria-label="Previous slide">‹ Prev</button>
+    <span class="muted"><span id="pno">1</span> / <span id="pcount">…</span></span>
+    <button class="btn ghost" type="button" id="next" aria-label="Next slide">Next ›</button>
+  </span>
+  <span id="guideNav" hidden>
+    <span class="muted">Page</span> <input id="jump" type="number" min="1" value="1" aria-label="Go to page"> <span class="muted">/ <span id="gcount">…</span></span>
+    <button class="btn ghost" type="button" id="zout" aria-label="Zoom out">−</button>
+    <button class="btn ghost" type="button" id="zin" aria-label="Zoom in">+</button>
+  </span>
+  <button class="btn ghost" type="button" id="fs">Full screen</button>
+  <a class="btn" id="dl" href="#" download>Download</a>
+</div>
+<div class="stage" id="stage"><div class="msg">Loading the document…</div></div>
+
+<script src="js/pdfjs/pdf.min.js"></script>
+<script>
+(function () {
+  const q = new URLSearchParams(location.search);
+  const file = q.get('doc') || '';
+  const mode = q.get('mode') === 'slides' ? 'slides' : 'guide';
+  const dl = q.get('dl') || file;
+  if (q.get('embed')) document.body.classList.add('embed');
+  document.body.classList.add(mode);
+  const stage = document.getElementById('stage');
+  const ttl = document.getElementById('ttl');
+  const name = decodeURIComponent(file.split('/').pop() || '').replace(/\.pdf$/, '').replace(/_/g, ' ');
+  ttl.textContent = name || 'Document';
+  document.title = name + ' · viewer';
+  const dlA = document.getElementById('dl');
+  dlA.href = dl; dlA.textContent = /\.pptx$/.test(dl) ? 'Download .pptx' : 'Download PDF';
+  if (!/^materials\/[A-Za-z0-9_\-]+\.pdf$/.test(file)) { stage.innerHTML = '<div class="msg">No document selected.</div>'; return; }
+  if (!window.pdfjsLib) { stage.innerHTML = '<div class="msg">The viewer could not load. <a href="' + file + '">Open the PDF directly</a>.</div>'; return; }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'js/pdfjs/pdf.worker.min.js';
+  const DPR = Math.min(window.devicePixelRatio || 1, 2.5);
+
+  document.getElementById('fs').onclick = () => {
+    const el = document.documentElement;
+    if (document.fullscreenElement) document.exitFullscreen(); else if (el.requestFullscreen) el.requestFullscreen();
+  };
+
+  pdfjsLib.getDocument(file).promise.then(pdf => {
+    stage.innerHTML = '';
+    return mode === 'slides' ? slides(pdf) : guide(pdf);
+  }).catch(() => { stage.innerHTML = '<div class="msg">Could not open the document. <a href="' + file + '">Open the PDF directly</a>.</div>'; });
+
+  // ---------------- slides: one page at a time
+  function slides(pdf) {
+    document.getElementById('slideNav').hidden = false;
+    document.getElementById('pcount').textContent = pdf.numPages;
+    const canvas = document.createElement('canvas'); stage.appendChild(canvas);
+    const l = document.createElement('div'); l.className = 'navzone l'; l.title = 'Previous';
+    const r = document.createElement('div'); r.className = 'navzone r'; r.title = 'Next';
+    stage.append(l, r);
+    let n = Math.max(1, Math.min(pdf.numPages, parseInt(q.get('page') || '1', 10) || 1)), task = null;
+    async function show() {
+      document.getElementById('pno').textContent = n;
+      const page = await pdf.getPage(n);
+      const v1 = page.getViewport({ scale: 1 });
+      const W = stage.clientWidth - 24, H = stage.clientHeight - 24;
+      const s = Math.max(0.2, Math.min(W / v1.width, H / v1.height));
+      const vp = page.getViewport({ scale: s * DPR });
+      if (task) { try { task.cancel(); } catch (e) {} }
+      const off = document.createElement('canvas'); off.width = vp.width; off.height = vp.height;
+      task = page.render({ canvasContext: off.getContext('2d'), viewport: vp });
+      try { await task.promise; } catch (e) { return; }
+      canvas.width = off.width; canvas.height = off.height;
+      canvas.style.width = (vp.width / DPR) + 'px'; canvas.style.height = (vp.height / DPR) + 'px';
+      canvas.getContext('2d').drawImage(off, 0, 0);
+      canvas.setAttribute('aria-label', 'Slide ' + n + ' of ' + pdf.numPages);
+    }
+    const go = d => { const m = Math.max(1, Math.min(pdf.numPages, n + d)); if (m !== n) { n = m; show(); } };
+    document.getElementById('prev').onclick = () => go(-1);
+    document.getElementById('next').onclick = () => go(1);
+    l.onclick = () => go(-1); r.onclick = () => go(1);
+    addEventListener('keydown', e => {
+      if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(1); }
+      if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); go(-1); }
+      if (e.key === 'Home') { n = 1; show(); } if (e.key === 'End') { n = pdf.numPages; show(); }
+    });
+    let x0 = null;
+    stage.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+    stage.addEventListener('touchend', e => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1); x0 = null; });
+    let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(show, 150); });
+    show();
+  }
+
+  // ---------------- guide: scrolling pages, rendered as they come into view
+  async function guide(pdf) {
+    document.getElementById('guideNav').hidden = false;
+    document.getElementById('gcount').textContent = pdf.numPages;
+    const jump = document.getElementById('jump'); jump.max = pdf.numPages;
+    const first = await pdf.getPage(1);
+    const v1 = first.getViewport({ scale: 1 });
+    let zoom = 1;
+    const pages = [];
+    const baseW = () => Math.min(stage.clientWidth - 20, 900) * zoom;
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const d = document.createElement('div'); d.className = 'page'; d.dataset.n = i;
+      stage.appendChild(d); pages.push(d);
+    }
+    function size() {
+      const w = baseW();
+      pages.forEach(d => { d.style.width = w + 'px'; d.style.height = (w * v1.height / v1.width) + 'px'; d.dataset.w = ''; });
+      pages.forEach(d => { if (d.dataset.vis === '1') render(d); });
+    }
+    async function render(d) {
+      const w = baseW();
+      if (d.dataset.w === String(w)) return;
+      d.dataset.w = String(w);
+      const page = await pdf.getPage(+d.dataset.n);
+      const vp = page.getViewport({ scale: (w / v1.width) * DPR });
+      const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
+      c.setAttribute('aria-label', 'Page ' + d.dataset.n);
+      await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+      d.replaceChildren(c);
+    }
+    const io = new IntersectionObserver(es => es.forEach(e => {
+      e.target.dataset.vis = e.isIntersecting ? '1' : '0';
+      if (e.isIntersecting) render(e.target);
+    }), { root: stage, rootMargin: '600px 0px' });
+    pages.forEach(d => io.observe(d));
+    stage.addEventListener('scroll', () => {
+      const mid = stage.scrollTop + stage.clientHeight / 3;
+      const cur = pages.find(d => d.offsetTop + d.offsetHeight > mid);
+      if (cur && document.activeElement !== jump) jump.value = cur.dataset.n;
+    }, { passive: true });
+    jump.addEventListener('change', () => {
+      const k = Math.max(1, Math.min(pdf.numPages, +jump.value || 1));
+      stage.scrollTo({ top: pages[k - 1].offsetTop - 10 });
+    });
+    document.getElementById('zin').onclick = () => { zoom = Math.min(2.5, zoom * 1.2); size(); };
+    document.getElementById('zout').onclick = () => { zoom = Math.max(0.5, zoom / 1.2); size(); };
+    let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(size, 200); });
+    size();
+  }
+})();
+</script>
+</body>
+</html>

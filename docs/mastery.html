@@ -17,8 +17,40 @@
       <span class="level-tag"><span class="shield">3</span>Level 3 of 3</span>
       <h1>Research directions, implemented</h1>
       <p class="lede">Five open questions about where adaptive control like SCATS is heading. Each comes with a working implementation on top of the lab's SUMO controller, the result it produced, and concrete ways to push it further. Several first attempts do not beat standard SCATS; that is the honest starting line for a thesis or paper.</p>
-      <p class="materials-links" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><a class="btn" style="text-decoration:none" href="materials/SCATS_Mastery_Study_Guide.pdf">Study guide (PDF)</a><a class="btn ghost" style="text-decoration:none" href="materials/SCATS_Mastery_Presentation.pptx" download>Slides (PowerPoint)</a></p>
+      <p class="materials-links" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px"><a class="btn" style="text-decoration:none" href="#materials" data-open="slides">View the slides</a><a class="btn ghost" style="text-decoration:none" href="#materials" data-open="guide">Read the study guide</a></p>
     </header>
+
+    <section class="prose" id="materials-sec">
+      <h2 id="materials" data-short="Study guide &amp; slides">Study guide and slides</h2>
+      <p>Step through the slides or read the beginner study guide right here. Change slides with the arrow keys, the buttons, or a swipe; open full screen for teaching. Both can also be downloaded.</p>
+      <div class="mat-tabs" role="tablist" style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
+        <button class="btn" type="button" role="tab" aria-selected="true" data-mode="slides" data-src="viewer.html?doc=materials/SCATS_Mastery_Presentation.pdf&amp;mode=slides&amp;dl=materials/SCATS_Mastery_Presentation.pptx&amp;embed=1">Slides</button>
+        <button class="btn ghost" type="button" role="tab" aria-selected="false" data-mode="guide" data-src="viewer.html?doc=materials/SCATS_Mastery_Study_Guide.pdf&amp;mode=guide&amp;embed=1">Study guide</button>
+        <a class="btn ghost" id="matFull" style="text-decoration:none" href="viewer.html?doc=materials/SCATS_Mastery_Presentation.pdf&amp;mode=slides&amp;dl=materials/SCATS_Mastery_Presentation.pptx" target="_blank" rel="noopener">Open in a new tab</a>
+        <a class="btn ghost" style="text-decoration:none" href="materials/SCATS_Mastery_Study_Guide.pdf" download>Guide PDF</a>
+        <a class="btn ghost" style="text-decoration:none" href="materials/SCATS_Mastery_Presentation.pptx" download>Slides .pptx</a>
+      </div>
+      <div id="matFrame" style="border:1px solid var(--line);border-radius:8px;overflow:hidden;aspect-ratio:16/10.6;width:100%;background:var(--sunk)">
+        <iframe id="matIframe" title="SCATS Mastery slides and study guide" src="viewer.html?doc=materials/SCATS_Mastery_Presentation.pdf&amp;mode=slides&amp;dl=materials/SCATS_Mastery_Presentation.pptx&amp;embed=1" loading="lazy" allowfullscreen style="width:100%;height:100%;border:0;display:block"></iframe>
+      </div>
+      <script>
+      (function () {
+        var tabs = document.querySelectorAll('.mat-tabs [data-mode]'), ifr = document.getElementById('matIframe'),
+            box = document.getElementById('matFrame'), full = document.getElementById('matFull');
+        function pick(mode) {
+          tabs.forEach(function (b) {
+            var on = b.dataset.mode === mode;
+            b.className = on ? 'btn' : 'btn ghost'; b.setAttribute('aria-selected', on);
+            if (on) { ifr.src = b.dataset.src; full.href = b.dataset.src.replace('&embed=1', ''); }
+          });
+          if (mode === 'guide') { box.style.aspectRatio = 'auto'; box.style.height = '85vh'; }
+          else { box.style.height = ''; box.style.aspectRatio = '16/10.6'; }
+        }
+        tabs.forEach(function (b) { b.addEventListener('click', function () { pick(b.dataset.mode); }); });
+        document.querySelectorAll('[data-open]').forEach(function (a) { a.addEventListener('click', function () { pick(a.dataset.open); }); });
+      })();
+      </script>
+    </section>
 
     <section class="prose">
       <h2 id="method" data-short="How to do the research">How to evaluate a new SCATS idea</h2>
