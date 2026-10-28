@@ -219,6 +219,49 @@ at saturation flow:  h = 3600 / s − (car length + loop length) / speed</div>
       </div>
     </div>
 
+    <div class="bay" id="dsWorkbench">
+      <div class="bay-head"><h4>DS workbench: calculate n·t, waste, g′ and DS yourself</h4><span class="hint">Build one green's loop record, then follow the calculation</span></div>
+      <div class="bay-body">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+          <div class="seg" id="wbPre" role="group" aria-label="Examples">
+            <button type="button" data-p="slide">Slide example</button><button type="button" data-p="light">Light traffic</button><button type="button" data-p="sat">Saturated</button><button type="button" data-p="jam">Crawling jam</button>
+          </div>
+          <div class="seg" id="wbMode" role="group" aria-label="Mode">
+            <button type="button" data-m="all" aria-pressed="true">Show all steps</button><button type="button" data-m="step" aria-pressed="false">One step at a time</button><button type="button" data-m="quiz" aria-pressed="false">Quiz me</button>
+          </div>
+        </div>
+        <canvas class="chart" id="wbCv" style="height:150px;touch-action:none;cursor:pointer" aria-label="Loop record for one green: click to add a car, drag to move, double-click to remove"></canvas>
+        <div class="legend" style="margin:2px 0 6px"><span><i style="background:var(--fg);height:10px"></i>car on loop</span><span><i style="background:#2f7fd1;height:10px;opacity:.55"></i>needed gap (t per car)</span><span><i style="background:var(--stop);height:10px;opacity:.55"></i>wasted green</span></div>
+        <p class="muted" style="margin:0 0 10px;font-size:.92rem"><b>Click</b> an empty part of the bar to add a car · <b>drag</b> a car to move it · <b>double-click</b> a car to remove it.</p>
+        <div class="bay-split">
+          <div>
+            <ol id="wbSteps" style="margin:0;padding-left:1.3rem"></ol>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn" type="button" id="wbNext" hidden>Next step</button>
+              <button class="btn" type="button" id="wbCheck" hidden>Check my answers</button>
+            </div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:baseline;gap:10px"><span style="font:700 2.4rem/1 var(--display)" id="wbDS" class="num">–</span><span class="muted">DS</span></div>
+            <div style="position:relative;height:16px;background:var(--sunk);border-radius:8px;margin:8px 0 2px;overflow:hidden">
+              <div id="wbFill" style="height:100%;width:0;transition:width .2s"></div>
+              <div style="position:absolute;top:0;bottom:0;left:64.3%;width:2px;background:var(--fg)" title="DS = 0.9"></div>
+              <div style="position:absolute;top:0;bottom:0;left:71.4%;width:2px;background:var(--stop)" title="DS = 1.0"></div>
+            </div>
+            <div class="muted" style="display:flex;justify-content:space-between;font-size:.8rem"><span>0</span><span style="margin-left:52%">0.9 · 1.0</span><span>1.4</span></div>
+            <div class="controls" style="margin-top:12px">
+              <div class="ctl"><label for="wbG">Green time g</label><output id="wbGo"></output><input type="range" id="wbG" min="10" max="60" step="1" value="30"></div>
+              <div class="ctl"><label for="wbOcc">Time each car is on the loop</label><output id="wbOcco"></output><input type="range" id="wbOcc" min="0.3" max="4" step="0.01" value="0.67"></div>
+              <div class="ctl"><label for="wbT">Standard space time t</label><output id="wbTo"></output><input type="range" id="wbT" min="0.4" max="2.5" step="0.05" value="1"></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="muted" id="wbNo"></span>
+                <button class="btn ghost" type="button" id="wbAdd">+ car</button><button class="btn ghost" type="button" id="wbDel">− car</button><button class="btn ghost" type="button" id="wbSpread">Spread evenly</button></div>
+            </div>
+          </div>
+        </div>
+        <p class="muted" style="margin:10px 0 0;font-size:.92rem">The slide example is g = 30 s, n = 12, T = 22 s, t = 1.0 s, giving n·t = 12 s, waste = 10 s, g′ = 20 s and DS = 0.67. Bunch the cars together, add cars, or make them crawl (longer time on the loop) to see the waste turn negative and DS pass 1. Illustrative numbers.</p>
+      </div>
+    </div>
+
     <section class="prose">
       <h2 id="live" data-short="Live intersection">Fixed time, actuated and SCATS, side by side</h2>
       <p>Three controllers on the same intersection and the same arrivals. <strong>Fixed</strong> runs a 90 s plan regardless of traffic. <strong>Actuated</strong> uses the loops to end greens early (gap-out) but keeps a fixed maximum. <strong>SCATS</strong> adds the strategic layer: after every cycle it computes DS, moves the cycle length towards a target DS of 0.9, and votes on the best of four split plans.</p>
@@ -302,5 +345,6 @@ python foundation/01_ds_lab.py --h 1.0      # what if h is mis-calibrated?</code
 <script src="js/common.js"></script>
 <script src="js/foundation.js"></script>
 <script src="js/spacetime.js"></script>
+<script src="js/dscalc.js"></script>
 </body>
 </html>
