@@ -2,7 +2,7 @@
 (function (g) {
   const PAGES = [
     ['index.html', 'Home'], ['foundation.html', 'Foundation'], ['advanced.html', 'Advanced'],
-    ['mastery.html', 'Mastery'], ['mindmap.html', 'Mind map'], ['sumo.html', 'SUMO code'], ['quiz.html', 'Quiz bank'],
+    ['mastery.html', 'Mastery'], ['mindmap.html', 'Mind map'], ['animations.html', 'Animations'], ['sumo.html', 'SUMO code'], ['quiz.html', 'Quiz bank'],
   ];
   const here = location.pathname.split('/').pop() || 'index.html';
 
