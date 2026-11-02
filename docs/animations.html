@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SCATS in Animations</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Thirteen short looping animations that explain SCATS step by step for beginners: cycles, gap-out, the standard space time h, degree of saturation, cycle length, split plans, green waves, marriage, bus priority and calibration.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="css/site.css">
+<style>
+  .anim-toc { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin: 1rem 0 2rem; padding: 0; list-style: none; }
+  .anim-toc a { display: block; padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); text-decoration: none; font-weight: 600; }
+  .anim { margin: 0 0 3rem; }
+  .anim figure { margin: 12px 0 0; }
+  .anim img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #f5f3ee; }
+  .anim figcaption { font-size: .95rem; color: var(--muted); margin-top: 6px; }
+  .anim .num { display: inline-block; min-width: 1.3em; font-family: var(--display, 'Barlow Condensed', sans-serif); font-weight: 700; color: #a34b12; }
+  .anim .keys { margin-top: 8px; padding: 10px 14px; border-left: 4px solid #a34b12; background: var(--surface); border-radius: 0 6px 6px 0; }
+  .anim .lvl { font-size: .85rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="level-head prose">
+    <h1>SCATS in animations</h1>
+    <p class="lede">Thirteen short, looping animations that build SCATS up one idea at a time, in lecture order. Each one has a plain-language explanation and the numbers to look for. No maths beyond arithmetic. The GIFs also work in PowerPoint: right-click to save any of them.</p>
+  </header>
+
+  <nav aria-label="Animations"><ol class="anim-toc">
+    <li><a href="#a1">1 · One cycle</a></li><li><a href="#a2">2 · Two levels of control</a></li><li><a href="#a3">3 · Gap-out</a></li>
+    <li><a href="#a4">4 · The normal gap h</a></li><li><a href="#a5">5 · Grading one green (DS)</a></li><li><a href="#a6">6 · Three DS levels</a></li>
+    <li><a href="#a7">7 · Critical intersection</a></li><li><a href="#a8">8 · Cycle length</a></li><li><a href="#a9">9 · Split plan vote</a></li>
+    <li><a href="#a10">10 · Green wave (offsets)</a></li><li><a href="#a11">11 · Marriage and divorce</a></li><li><a href="#a12">12 · Bus priority</a></li>
+    <li><a href="#a13">13 · Calibrating h</a></li>
+  </ol></nav>
+
+  <section class="prose anim" id="a1">
+    <p class="lvl">Foundation · signal words</p>
+    <h2><span class="num">1</span>One cycle, second by second</h2>
+    <p>A signal shares the junction by giving each <b>phase</b> a turn. One round of all phases is the <b>cycle</b>. Between greens comes the <b>intergreen</b> (amber + all-red): nobody moves, so it is lost time. How the remaining green is shared is the <b>split</b>.</p>
+    <figure><img src="animations/SCATS_08_one_cycle_phases.gif" alt="Animation: a playhead runs through a 90 s cycle while phase A and phase B lights change and cars move on the green road" loading="lazy"><figcaption>Phase A (east–west) green 48 s · intergreen 5 s · phase B (north–south) green 32 s · intergreen 5 s.</figcaption></figure>
+    <p class="keys">90 s cycle − 2 × 5 s intergreen = <b>80 s</b> of green; split 60/40 gives <b>48 s</b> and <b>32 s</b>. Lost time 10 s = 11% of a 90 s cycle (17% of a 60 s cycle).</p>
+  </section>
+
+  <section class="prose anim" id="a2">
+    <p class="lvl">Foundation · two levels of control</p>
+    <h2><span class="num">2</span>Waiters every second, a manager every cycle</h2>
+    <p><b>Tactical</b> control runs in the roadside controller every second: it ends empty greens early (gap-out), skips phases nobody wants and serves buses. <b>Strategic</b> control runs in the regional computer once per cycle: it measures how well each green was used and sets the cycle length, split plan and offset plan.</p>
+    <figure><img src="animations/SCATS_09_tactical_vs_strategic.gif" alt="Animation: tactical ticks every second with occasional gap-outs, and strategic decisions once per 90 s cycle" loading="lazy"><figcaption>Three minutes compressed: 180 tactical checks, 2 strategic decisions.</figcaption></figure>
+    <p class="keys">With a 90 s cycle: <b>40</b> strategic decisions an hour, each backed by <b>90</b> second-by-second checks.</p>
+  </section>
+
+  <section class="prose anim" id="a3">
+    <p class="lvl">Foundation / Advanced · tactical control</p>
+    <h2><span class="num">3</span>Gap-out: end the green when the cars stop coming</h2>
+    <p>After the minimum green, every car crossing the stop-line loop restarts a short <b>gap timer</b>. If the timer reaches its setting, nobody is coming: the green ends early and the unused time goes to the next phase.</p>
+    <figure><img src="animations/SCATS_02_gap_out.gif" alt="Animation: cars reset a gap timer; at 8.5 s the gap reaches 3 s and the green ends, passing 16.5 s to the main road" loading="lazy"><figcaption>Planned green 25 s, minimum 8 s, gap setting 3 s; cars at 1.0, 2.5, 4.0 and 5.5 s.</figcaption></figure>
+    <p class="keys">Gap-out at <b>8.5 s</b>; <b>16.5 s</b> of empty green passed to the main road. The car arriving at 9.5 s waits for the next cycle.</p>
+  </section>
+
+  <section class="prose anim" id="a4">
+    <p class="lvl">Foundation · measuring demand</p>
+    <h2><span class="num">4</span>The normal gap h, then wasted green</h2>
+    <p>Even a packed queue leaves a small empty-loop time between cars: the <b>standard space time h</b>. Any gap longer than h is green that nobody used.</p>
+    <figure><img src="animations/SCATS_10_normal_gap_h.gif" alt="Animation: a queue drains leaving 1.6 s gaps; a late car leaves a 6 s gap, of which 4.4 s is wasted" loading="lazy"><figcaption>Grey = normal gap h · red = longer than h, wasted green.</figcaption></figure>
+    <p class="keys">h ≈ <b>1.6 s</b> (measured 1.62 s in the lab). A 6.0 s gap = 1.6 s normal + <b>4.4 s wasted</b>.</p>
+  </section>
+
+  <section class="prose anim" id="a5">
+    <p class="lvl">Foundation · degree of saturation</p>
+    <h2><span class="num">5</span>Grading one green: the degree of saturation (DS)</h2>
+    <p>During each green SCATS adds up how long the loop sat empty (<b>T</b>) and counts the cars (<b>n</b>). Normal gaps are n × h; anything beyond is wasted. The rest is <b>used green</b>, and DS is the share of the green that was used.</p>
+    <figure><img src="animations/SCATS_01_degree_of_saturation.gif" alt="Animation: cars cross the stop-line loop during a 40 s green; the strip shows occupied time, normal gaps and wasted gaps; DS = 0.90" loading="lazy"><figcaption>g′ = g − (T − n·h) · DS = g′ ÷ g</figcaption></figure>
+    <p class="keys">g = 40 s, T = 20 s, n = 10, h = 1.6 s → wasted 20 − 16 = <b>4 s</b> → used 36 s → <b>DS = 0.90</b>, right at the usual target.</p>
+  </section>
+
+  <section class="prose anim" id="a6">
+    <p class="lvl">Foundation · what DS means</p>
+    <h2><span class="num">6</span>Three approaches, three grades</h2>
+    <p>Low DS means the green was largely wasted; about 0.9 means well used with a small safety margin; about 1 or more means no spare gaps and cars still waiting when the green ends.</p>
+    <figure><img src="animations/SCATS_11_three_DS_levels.gif" alt="Animation: 30 s of green on a quiet, a well-used and an overloaded approach" loading="lazy"><figcaption>Quiet DS ≈ 0.5 · well used DS ≈ 0.9 · overloaded DS ≈ 1.0 with cars left waiting.</figcaption></figure>
+    <p class="keys">Low DS → give green away or shorten the cycle · DS ≈ 0.9 → keep · DS ≥ 1 → more green or a longer cycle (up to +9 s).</p>
+  </section>
+
+  <section class="prose anim" id="a7">
+    <p class="lvl">Advanced · subsystems</p>
+    <h2><span class="num">7</span>The critical intersection</h2>
+    <p>Signals that must stay coordinated form a <b>subsystem</b> and share one cycle. The busiest junction is the <b>critical intersection (CI)</b>; its DS sets the cycle for all of them, while each keeps its own split and offset.</p>
+    <figure><img src="animations/SCATS_12_critical_intersection.gif" alt="Animation: J1, J2 and J3 report DS 0.78, 0.91 and 0.66; J2 is critical and all three run its 81 s cycle" loading="lazy"><figcaption>J2 has the highest DS, 0.91, so it is critical.</figcaption></figure>
+    <p class="keys">Next cycle for all three: 80 × 0.91 ÷ 0.9 ≈ <b>81 s</b>.</p>
+  </section>
+
+  <section class="prose anim" id="a8">
+    <p class="lvl">Foundation / Advanced · strategic decision 1</p>
+    <h2><span class="num">8</span>Cycle length: small steps towards DS 0.9</h2>
+    <p>SCATS works out the cycle that would have given DS 0.9 (<b>desired = cycle × DS ÷ 0.9</b>) but moves only part of the way each cycle, within a minimum and maximum cycle.</p>
+    <figure><img src="animations/SCATS_03_cycle_length.gif" alt="Animation: the actual cycle moves towards the desired cycle in limited steps" loading="lazy"><figcaption>Dashed circle = desired cycle · blue dot = actual cycle.</figcaption></figure>
+    <p class="keys">80 s with DS 1.05 → desired 93.3 s → <b>+9 s</b> (DS ≥ 1) → 89 s; then DS 0.97 → +6 s → 95 s; DS 0.90 → hold. Limits in the lab: +6 s (+9 s if DS ≥ 1), −6 s, between 40 and 140 s.</p>
+  </section>
+
+  <section class="prose anim" id="a9">
+    <p class="lvl">Advanced · strategic decision 2</p>
+    <h2><span class="num">9</span>Split plans: predict, compare, vote</h2>
+    <p>For each stored split plan, SCATS predicts each phase’s DS (<b>measured DS × green now ÷ green in the plan</b>). The best plan is the one whose <b>worst</b> phase is lowest, and it must win 2 of the last 3 cycles before it goes into service.</p>
+    <figure><img src="animations/SCATS_04_split_plan_vote.gif" alt="Animation: three split plans with predicted DS bars; SP2 wins with worst DS 0.84 and goes into service after 2 of 3 votes" loading="lazy"><figcaption>Measured with SP1: A 0.95, B 0.50, C 0.70.</figcaption></figure>
+    <p class="keys">Worst phase: SP1 0.95 · <b>SP2 0.84</b> · SP3 1.09 → SP2 moves 5 s to the overloaded main road.</p>
+  </section>
+
+  <section class="prose anim" id="a10">
+    <p class="lvl">Advanced · strategic decision 3</p>
+    <h2><span class="num">10</span>Offsets: from stop-and-go to a green wave</h2>
+    <p>The <b>offset</b> is when a junction’s cycle starts compared with the reference. Setting each offset to the travel time from the previous junction lets a platoon ride a wave of greens. SCATS chooses among stored offset plans and needs 4 of the last 5 votes to change.</p>
+    <figure><img src="animations/SCATS_05_offsets_green_wave.gif" alt="Animation: time-space diagram; with all offsets zero the platoon stops at J3, with offsets 0, 21.6, 43.2, 64.7 s it passes without stopping" loading="lazy"><figcaption>Four junctions 300 m apart, 50 km/h, 80 s cycle.</figcaption></figure>
+    <p class="keys">300 m ÷ 13.9 m/s = <b>21.6 s</b> per link. OP3 (all together): 6 stops at J3 · OP1 (0, 21.6, 43.2, 64.7 s): <b>no stops</b>.</p>
+  </section>
+
+  <section class="prose anim" id="a11">
+    <p class="lvl">Advanced · linking subsystems</p>
+    <h2><span class="num">11</span>Marriage and divorce</h2>
+    <p>Two neighbouring subsystems <b>marry</b> (run one common cycle) when enough traffic flows between them, and <b>divorce</b> when it drops. Different on/off thresholds plus three votes in a row stop them flip-flopping.</p>
+    <figure><img src="animations/SCATS_06_marriage_divorce.gif" alt="Animation: link VK bars per cycle; three values of 18 or more marry the subsystems, three below 10 divorce them" loading="lazy"><figcaption>Link VK per cycle: 12, 15, 19, 20, 17, 21, 22, 23, 16, 12, 9, 11, 8, 7, 6.</figcaption></figure>
+    <p class="keys">Marry at link VK ≥ <b>18</b>, divorce below <b>10</b>, 3 votes in a row → married at cycle 8, divorced at cycle 15.</p>
+  </section>
+
+  <section class="prose anim" id="a12">
+    <p class="lvl">Advanced · public transport priority</p>
+    <h2><span class="num">12</span>A late bus under low, medium and high priority</h2>
+    <p>A bus arrives 2 s after its green ended. Higher priority saves the bus more time but costs the side road more, which is why buses usually get medium priority and trams or emergency vehicles high.</p>
+    <figure><img src="animations/SCATS_13_bus_priority.gif" alt="Animation: three timelines; the bus waits 38 s with low, 18 s with medium and 3 s with high priority" loading="lazy"><figcaption>80 s cycle: bus phase A 0–40 s, side road B 45–75 s, B minimum 10 s.</figcaption></figure>
+    <p class="keys">Low: waits <b>38 s</b> · Medium (B cut to its minimum): <b>18 s</b> · High (B skipped): <b>3 s</b>.</p>
+  </section>
+
+  <section class="prose anim" id="a13">
+    <p class="lvl">Foundation / Mastery · calibration</p>
+    <h2><span class="num">13</span>Why h must be calibrated</h2>
+    <p>With the same green and the same cars, only the value of h changes. A bigger h counts more empty time as normal, so less looks wasted and DS rises; a smaller h does the opposite. Every cycle, split and offset decision inherits the error.</p>
+    <figure><img src="animations/SCATS_14_calibrating_h.gif" alt="Animation: h slides between 1.4 and 1.8 s and the DS bar moves between 0.85 and 0.95" loading="lazy"><figcaption>g = 40 s, T = 20 s, n = 10.</figcaption></figure>
+    <p class="keys">h 1.4 s → DS <b>0.85</b> · h 1.6 s → <b>0.90</b> · h 1.8 s → <b>0.95</b>. Measure h (and MF) on site.</p>
+  </section>
+
+  <p class="prose">Numbers are the course’s teaching values from the Foundation and Advanced levels and their SUMO labs; each real SCATS installation is configured for its own site. Next: try the simulators in <a href="foundation.html">Foundation</a>, the <a href="foundation.html#dsWorkbench">DS workbench</a> or the <a href="quiz.html">quiz bank</a>.</p>
+</main>
+<script src="js/common.js"></script>
+</body>
+</html>
