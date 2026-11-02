@@ -14,6 +14,10 @@ for **Eclipse SUMO**.
 
 Plus a **42-question quiz bank** with explanations and an explorable **mind map**.
 
+## Animations
+
+[`docs/animations.html`](docs/animations.html) walks through SCATS in 13 short looping GIF animations, in lecture order, each with a plain-language explanation and the key numbers: one cycle, tactical vs strategic control, gap-out, the standard space time h, degree of saturation, three DS levels, the critical intersection, cycle length, split-plan voting, offsets and green waves, marriage and divorce, bus priority and calibrating h. The GIFs are in [`docs/animations/`](docs/animations) and can be dropped into PowerPoint.
+
 ## Study guides and slides
 
 Beginner-friendly study guides (plain-language explanations, worked hand calculations, a memory route, mind maps, an 18-question self-quiz with answers, a cheat sheet and a revision plan) and a matching slide deck with speaker notes for each level:
